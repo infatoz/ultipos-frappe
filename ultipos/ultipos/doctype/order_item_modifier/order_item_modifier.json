@@ -1,0 +1,58 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:modifier_name",
+ "creation": "2026-01-08 01:47:15.570607",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "modifier_name",
+  "qty",
+  "price",
+  "show_in_kds"
+ ],
+ "fields": [
+  {
+   "fieldname": "modifier_name",
+   "fieldtype": "Data",
+   "label": "Modifier Name",
+   "unique": 1
+  },
+  {
+   "fieldname": "qty",
+   "fieldtype": "Int",
+   "label": "Qty",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "price",
+   "fieldtype": "Currency",
+   "label": "Price",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_in_kds",
+   "fieldtype": "Check",
+   "label": "Show in KDS"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-01-08 01:48:35.861567",
+ "modified_by": "Administrator",
+ "module": "Ultipos",
+ "name": "Order Item Modifier",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,23 @@
+{
+ "content": null,
+ "creation": "2026-01-06 23:40:20.191140",
+ "docstatus": 0,
+ "doctype": "Page",
+ "icon": "dashboard",
+ "idx": 0,
+ "modified": "2026-01-06 23:40:20.191140",
+ "modified_by": "Administrator",
+ "module": "Ultipos",
+ "name": "restaurant-dashboard",
+ "owner": "Administrator",
+ "page_name": "restaurant-dashboard",
+ "roles": [
+  {
+   "role": "Restaurant Owner"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0
+}

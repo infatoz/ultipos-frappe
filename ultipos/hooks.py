@@ -26,7 +26,7 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/ultipos/css/ultipos.css"
-# app_include_js = "/assets/ultipos/js/ultipos.js"
+app_include_js = ["/assets/ultipos/js/qz-loader.js","/assets/ultipos/js/qz-init.js"]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/ultipos/css/ultipos.css"
@@ -117,9 +117,10 @@ app_license = "mit"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
+permission_query_conditions = {
+"Outlet": "ultipos.permissions.outlet.outlet_permission_query",
+"Restaurant": "ultipos.permissions.restaurant.restaurant_permission_query"
+}
 #
 # has_permission = {
 # 	"Event": "frappe.desk.doctype.event.event.has_permission",

@@ -1,0 +1,151 @@
+{
+ "actions": [],
+ "autoname": "field:outlet_name",
+ "creation": "2026-01-06 22:38:00.656027",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "outlet_name",
+  "restaurant",
+  "status",
+  "address_line_1",
+  "address_line_2",
+  "suburb",
+  "state",
+  "country",
+  "latitude",
+  "longitude",
+  "phone",
+  "email",
+  "is_accepting_orders",
+  "pos_type",
+  "pos_outlet_id"
+ ],
+ "fields": [
+  {
+   "fieldname": "outlet_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Outlet Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "restaurant",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "in_list_view": 1,
+   "label": "Restaurant",
+   "options": "Restaurant",
+   "search_index": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Active\nInactive",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "address_line_1",
+   "fieldtype": "Data",
+   "label": "Address Line 1",
+   "reqd": 1
+  },
+  {
+   "fieldname": "address_line_2",
+   "fieldtype": "Data",
+   "label": "Address Line 2"
+  },
+  {
+   "fieldname": "suburb",
+   "fieldtype": "Data",
+   "label": "Suburb",
+   "reqd": 1
+  },
+  {
+   "fieldname": "state",
+   "fieldtype": "Select",
+   "label": "State",
+   "options": "NSW\nVIC\nQLD",
+   "reqd": 1
+  },
+  {
+   "default": "Australia",
+   "fieldname": "country",
+   "fieldtype": "Select",
+   "label": "Country",
+   "options": "Australia",
+   "reqd": 1
+  },
+  {
+   "fieldname": "latitude",
+   "fieldtype": "Float",
+   "label": "Latitude"
+  },
+  {
+   "fieldname": "longitude",
+   "fieldtype": "Float",
+   "label": "Longitude"
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "label": "Store Phone"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Store Email"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_accepting_orders",
+   "fieldtype": "Check",
+   "label": "Accept Orders",
+   "search_index": 1
+  },
+  {
+   "fieldname": "pos_type",
+   "fieldtype": "Select",
+   "label": "POS Type",
+   "options": "Mobipos\nNone"
+  },
+  {
+   "fieldname": "pos_outlet_id",
+   "fieldtype": "Data",
+   "label": "POS Outlet ID"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-01-07 01:35:50.291559",
+ "modified_by": "Administrator",
+ "module": "Ultipos",
+ "name": "Outlet",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

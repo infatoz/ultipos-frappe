@@ -7,6 +7,7 @@
  "field_order": [
   "outlet_name",
   "restaurant",
+  "outlet_code",
   "status",
   "address_line_1",
   "address_line_2",
@@ -117,12 +118,19 @@
    "fieldname": "pos_outlet_id",
    "fieldtype": "Data",
    "label": "POS Outlet ID"
+  },
+  {
+   "fieldname": "outlet_code",
+   "fieldtype": "Data",
+   "label": "Outlet Code",
+   "reqd": 1,
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-07 01:35:50.291559",
+ "modified": "2026-01-09 00:56:01.212810",
  "modified_by": "Administrator",
  "module": "Ultipos",
  "name": "Outlet",

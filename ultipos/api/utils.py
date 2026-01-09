@@ -19,14 +19,14 @@ def build_items(menu_items):
             options = frappe.get_all(
                 "Modifier Option",
                 filters={"modifier_group": mg.modifier_group},
-                fields=["name", "option_name", "price"]
+                fields=["name", "option_name", "price_delta"]
             )
 
             modifiers.append({
                 "group": mg.modifier_group,
                 "min": mg.min_qty,
                 "max": mg.max_qty,
-                "required": mg.required,
+                "required": 1,
                 "options": [
                     {
                         "id": o.name,

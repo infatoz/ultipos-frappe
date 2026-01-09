@@ -9,8 +9,8 @@ def get_store(outlet_code):
     return {
         "restaurant": {
             "name": restaurant.restaurant_name,
-            "logo": restaurant.logo,
-            "theme": restaurant.theme_config
+            # "logo": restaurant.logo || "",
+            # "theme": restaurant.theme_config
         },
         "outlet": {
             "name": outlet.outlet_name,

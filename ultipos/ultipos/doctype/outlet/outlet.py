@@ -4,6 +4,12 @@
 import frappe
 from frappe.model.document import Document
 
+def get_user_restaurant(user):
+    return frappe.db.get_value(
+        "Restaurant User",
+        {"user": user, "role": "Owner"},
+        "restaurant"
+    )
 
 class Outlet(Document):
 
@@ -24,3 +30,35 @@ class Outlet(Document):
     def validate(self):
         if self.status == "Inactive":
             self.is_accepting_orders = 0
+
+
+# import frappe
+# from frappe.model.document import Document
+
+# def get_user_restaurant(user):
+#     return frappe.db.get_value(
+#         "Restaurant User",
+#         {"user": user, "role": "Owner"},
+#         "restaurant"
+#     )
+
+# class Outlet(Document):
+
+#     def before_insert(self):
+#         # If restaurant already selected in UI, don't override
+#         if self.restaurant:
+#             return
+
+#         user_restaurant = get_user_restaurant(frappe.session.user)
+
+#         if not user_restaurant:
+#             frappe.throw(
+#                 "Restaurant is not assigned to your user. "
+#                 "Create a Restaurant User record for this user OR select restaurant manually."
+#             )
+
+#         self.restaurant = user_restaurant
+
+#     def validate(self):
+#         if self.status == "Inactive":
+#             self.is_accepting_orders = 0

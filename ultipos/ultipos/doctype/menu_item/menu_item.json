@@ -14,6 +14,7 @@
   "show_in_kds",
   "external_item_id",
   "status",
+  "image",
   "item_printers",
   "item_modifier_groups",
   "inherit_category_config"
@@ -90,12 +91,17 @@
    "fieldname": "inherit_category_config",
    "fieldtype": "Check",
    "label": "Inherit Category Config"
+  },
+  {
+   "fieldname": "image",
+   "fieldtype": "Attach Image",
+   "label": "Image"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-08 23:16:20.788028",
+ "modified": "2026-01-13 01:00:01.652977",
  "modified_by": "Administrator",
  "module": "Ultipos",
  "name": "Menu Item",

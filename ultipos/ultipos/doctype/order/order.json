@@ -20,6 +20,9 @@
   "tax_amount",
   "discount_amount",
   "delivery_fee",
+  "order_customer",
+  "order_item",
+  "order_item_modifier",
   "notes"
  ],
  "fields": [
@@ -53,7 +56,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Platform",
-   "options": "POS\nUltiPOS\nUberEats\nDoorDash\nOther",
+   "options": "POS\nUltiPOS\nUberEats\nDoorDash\nOther\nWeb",
    "reqd": 1
   },
   {
@@ -94,8 +97,7 @@
   {
    "fieldname": "scheduled_time",
    "fieldtype": "Datetime",
-   "label": "Scheduled Time",
-   "reqd": 1
+   "label": "Scheduled Time"
   },
   {
    "fieldname": "total_amount",
@@ -130,12 +132,30 @@
    "fieldname": "notes",
    "fieldtype": "Small Text",
    "label": "Notes"
+  },
+  {
+   "fieldname": "order_customer",
+   "fieldtype": "Table",
+   "label": "Order Customer",
+   "options": "Order Customer"
+  },
+  {
+   "fieldname": "order_item",
+   "fieldtype": "Table",
+   "label": "Order Item",
+   "options": "Order Item"
+  },
+  {
+   "fieldname": "order_item_modifier",
+   "fieldtype": "Table",
+   "label": "Order Item Modifier",
+   "options": "Order Item Modifier"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-08 01:41:21.097139",
+ "modified": "2026-01-13 03:29:49.990221",
  "modified_by": "Administrator",
  "module": "Ultipos",
  "name": "Order",
@@ -187,6 +207,18 @@
    "read": 1,
    "report": 1,
    "role": "Order Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Guest",
    "share": 1,
    "write": 1
   }

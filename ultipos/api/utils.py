@@ -1,3 +1,4 @@
+# utils.py:
 import json
 import frappe
 from frappe.utils import now_datetime, getdate
@@ -81,12 +82,31 @@ def normalize_money(x):
         return 0.0
 
 
-def build_modifier_group_payload(mod_group_name: str, min_qty=0, max_qty=0, required=False):
-    """
-    Returns full modifier group structure:
-      group details + options list
-    """
+def build_modifier_group_payload(mod_group_name: str, min_qty=None, max_qty=None, required=False):
     group = frappe.get_doc("Modifier Group", mod_group_name)
+
+    group_min = int(getattr(group, "min_qty", 0) or 0)
+    group_max = int(getattr(group, "max_qty", 0) or 0)
+
+    final_min = group_min
+    final_max = group_max
+
+    # override only if provided and > 0
+    if min_qty is not None:
+        try:
+            if int(min_qty) > 0:
+                final_min = int(min_qty)
+        except Exception:
+            pass
+
+    if max_qty is not None:
+        try:
+            if int(max_qty) > 0:
+                final_max = int(max_qty)
+        except Exception:
+            pass
+
+    final_required = bool(required or getattr(group, "required", 0))
 
     options = frappe.get_all(
         "Modifier Option",
@@ -98,9 +118,9 @@ def build_modifier_group_payload(mod_group_name: str, min_qty=0, max_qty=0, requ
     return {
         "group_id": group.name,
         "name": group.group_name,
-        "required": bool(required or group.required),
-        "min": int(min_qty if min_qty is not None else group.min_qty or 0),
-        "max": int(max_qty if max_qty is not None else group.max_qty or 0),
+        "required": final_required,
+        "min": final_min,
+        "max": final_max,
         "options": [
             {
                 "option_id": o["name"],
@@ -113,7 +133,6 @@ def build_modifier_group_payload(mod_group_name: str, min_qty=0, max_qty=0, requ
             for o in options
         ],
     }
-
 
 def resolve_item_modifier_groups(item_doc):
     """
@@ -133,8 +152,9 @@ def resolve_item_modifier_groups(item_doc):
             groups.append(
                 build_modifier_group_payload(
                     row.modifier_group,
-                    min_qty=row.min_qty,
-                    max_qty=row.max_qty,
+                    min_qty=getattr(row, "min_qty", None),
+                    max_qty=getattr(row, "max_qty", None),
+
                     required=row.required,
                 )
             )
@@ -144,8 +164,9 @@ def resolve_item_modifier_groups(item_doc):
         groups.append(
             build_modifier_group_payload(
                 row.modifier_group,
-                min_qty=row.min_qty,
-                max_qty=row.max_qty,
+                min_qty=getattr(row, "min_qty", None),
+                max_qty=getattr(row, "max_qty", None),
+
                 required=False,
             )
         )
@@ -251,20 +272,3 @@ def build_order_items(items):
         )
 
     return rows
-
-
-def get_worldline_settings(restaurant):
-    doc = frappe.get_all(
-        "Worldline Settings",
-        filters={
-            "restaurant": restaurant,
-            "is_enabled": 1
-        },
-        limit=1
-    )
-
-    if not doc:
-        frappe.throw("Worldline not enabled for this restaurant")
-
-    return frappe.get_doc("Worldline Settings", doc[0].name)
-

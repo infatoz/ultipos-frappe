@@ -1,3 +1,4 @@
+# store.py:
 import frappe
 from ultipos.api.utils import get_outlet, get_online_store_settings
 

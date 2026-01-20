@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "modifier_name",
+  "item_name",
   "qty",
   "price",
   "show_in_kds"
@@ -36,13 +37,18 @@
    "fieldname": "show_in_kds",
    "fieldtype": "Check",
    "label": "Show in KDS"
+  },
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "label": "Item Name"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-01-13 05:02:07.889816",
+ "modified": "2026-01-20 20:21:37.932142",
  "modified_by": "Administrator",
  "module": "Ultipos",
  "name": "Order Item Modifier",

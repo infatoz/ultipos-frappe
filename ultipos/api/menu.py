@@ -1,3 +1,4 @@
+# menu.py:
 import frappe
 from ultipos.api.utils import get_outlet, build_items
 

@@ -1,12 +1,13 @@
+# coupon.py:
 import frappe
 from frappe.utils import now_datetime, getdate
 
 
 @frappe.whitelist(allow_guest=True)
-def get_active(outlet_code):
+def get_active(outlet_code=None):
     """
-    ✅ Returns active coupons for an outlet
-    Frontend expects list of coupons
+    ✅ Returns active coupons for outlet
+    SAFE: selects only fields that exist in your Coupon DocType
     """
     if not outlet_code:
         frappe.throw("outlet_code required")
@@ -19,9 +20,7 @@ def get_active(outlet_code):
 
     coupons = frappe.get_all(
         "Coupon",
-        filters={
-            "status": "Active",
-        },
+        filters={"status": "Active"},
         fields=[
             "name",
             "coupon_code",
@@ -32,37 +31,46 @@ def get_active(outlet_code):
             "start_date",
             "end_date",
             "outlet",
+            "platform",
+            "applicable_order_type",
         ],
         order_by="modified desc",
     )
 
     result = []
     for c in coupons:
-        # outlet restriction
+        # ✅ outlet restriction
         if c.get("outlet") and c.get("outlet") != outlet_name:
             continue
 
-        # date validity
+        # ✅ date validity
         if c.get("start_date") and today < getdate(c.get("start_date")):
             continue
         if c.get("end_date") and today > getdate(c.get("end_date")):
             continue
 
         result.append({
-            "coupon_code": c.get("coupon_code"),
+            "coupon_code": (c.get("coupon_code") or "").upper(),
             "discount_type": c.get("discount_type"),
-            "discount_value": c.get("discount_value"),
-            "min_order_amount": c.get("min_order_amount"),
-            "max_discount": c.get("max_discount"),
+            "discount_value": float(c.get("discount_value") or 0),
+
+            "min_order_amount": float(c.get("min_order_amount") or 0),
+            "max_discount": float(c.get("max_discount") or 0),
+
+            "start_date": str(c.get("start_date") or ""),
+            "end_date": str(c.get("end_date") or ""),
+
+            "platform": c.get("platform"),
+            "applicable_order_type": c.get("applicable_order_type"),
         })
 
     return result
 
 
 @frappe.whitelist(allow_guest=True)
-def validate_coupon(outlet_code, coupon_code, cart_total, customer_id=None):
+def validate_coupon(outlet_code=None, coupon_code=None, cart_total=0, customer_id=None):
     """
-    ✅ Your existing validate_coupon (kept) - only minor safety fixes
+    ✅ validates and returns discount
     """
     if not outlet_code or not coupon_code:
         frappe.throw("outlet_code and coupon_code required")
@@ -81,39 +89,33 @@ def validate_coupon(outlet_code, coupon_code, cart_total, customer_id=None):
 
     coupon = frappe.get_doc("Coupon", coupon_name)
 
-    # outlet restriction (if coupon.outlet is set)
+    # ✅ outlet restriction
     if coupon.outlet and coupon.outlet != outlet_name:
         frappe.throw("Coupon not applicable for this outlet")
 
     cart_total = float(cart_total or 0)
 
+    # ✅ min order check
     if coupon.min_order_amount and cart_total < float(coupon.min_order_amount):
         frappe.throw("Minimum order not met")
 
+    # ✅ date validity
     today = getdate(now_datetime())
     if coupon.start_date and today < getdate(coupon.start_date):
         frappe.throw("Coupon not started yet")
     if coupon.end_date and today > getdate(coupon.end_date):
         frappe.throw("Coupon expired")
 
-    # per customer limit
-    if customer_id and coupon.per_customer_limit:
-        used_count = frappe.db.count(
-            "Coupon Usage",
-            filters={"coupon": coupon.name, "customer": customer_id}
-        )
-        if used_count >= int(coupon.per_customer_limit):
-            frappe.throw("Coupon usage limit exceeded for customer")
-
+    # ✅ discount
     discount = 0
     if coupon.discount_type == "Percentage":
         discount = cart_total * float(coupon.discount_value or 0) / 100.0
     else:
         discount = float(coupon.discount_value or 0)
 
-    # apply max discount
-    if coupon.max_discount and discount > float(coupon.max_discount):
-        discount = float(coupon.max_discount)
+    # ✅ apply max discount
+    if coupon.max_discount and float(coupon.max_discount) > 0:
+        discount = min(discount, float(coupon.max_discount))
 
     discount = min(discount, cart_total)
 

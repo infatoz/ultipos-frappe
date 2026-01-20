@@ -26,7 +26,13 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/ultipos/css/ultipos.css"
-app_include_js = ["/assets/ultipos/js/qz-loader.js","/assets/ultipos/js/qz-init.js"]
+app_include_js = ["/assets/ultipos/js/qz-loader.js","/assets/ultipos/js/qz-init.js", "/assets/ultipos/js/ultipos-printer.js"]
+
+website_route_rules = [
+    {"from_route": "/web-orders", "to_route": "web_orders"},
+    {"from_route": "/web-orders/<path>", "to_route": "web_orders"},
+]
+
 
 # include js, css files in header of web template
 # web_include_css = "/assets/ultipos/css/ultipos.css"

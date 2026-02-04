@@ -15,6 +15,7 @@
   "external_item_id",
   "status",
   "image",
+  "is_veg",
   "item_printers",
   "item_modifier_groups",
   "inherit_category_config"
@@ -96,12 +97,18 @@
    "fieldname": "image",
    "fieldtype": "Attach Image",
    "label": "Image"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_veg",
+   "fieldtype": "Check",
+   "label": "Is Veg?"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-13 01:00:01.652977",
+ "modified": "2026-02-02 20:03:48.777084",
  "modified_by": "Administrator",
  "module": "Ultipos",
  "name": "Menu Item",

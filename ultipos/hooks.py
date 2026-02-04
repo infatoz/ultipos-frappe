@@ -26,7 +26,13 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/ultipos/css/ultipos.css"
-app_include_js = ["/assets/ultipos/js/qz-loader.js","/assets/ultipos/js/qz-init.js", "/assets/ultipos/js/ultipos-printer.js"]
+
+app_include_js = [
+    "/assets/ultipos/js/qz_loader.js",
+    "/assets/ultipos/js/kot_print.js",
+    "/assets/ultipos/js/order_list.js",
+]
+
 
 website_route_rules = [
     {"from_route": "/web-orders", "to_route": "web_orders"},
@@ -143,6 +149,15 @@ permission_query_conditions = {
 # Document Events
 # ---------------
 # Hook on document methods and events
+
+doc_events = {
+    "Order": {
+        # "before_insert": "ultipos.api.order_hooks.before_insert_order",
+        "after_insert": "ultipos.api.kot.publish_kot"
+        # "on_update": "ultipos.api.kot.trigger_kot_on_status",
+    }
+}
+
 
 # doc_events = {
 # 	"*": {

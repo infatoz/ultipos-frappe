@@ -1,18 +1,53 @@
-console.log("🚀 Order List JS loaded");
-
 frappe.listview_settings["Order"] = {
-    onload() {
-        console.log("👂 Listening for KOT events...");
 
-        frappe.realtime.on("kot_print", payload => {
-            console.log("🚨 KOT EVENT RECEIVED", payload);
+    refresh(listview) {
 
-            frappe.show_alert(
-                { message: `🧾 New Order ${payload.order_number}`, indicator: "green" },
-                5
-            );
+        listview.page.add_inner_button("Auto Accept ON/OFF", () => {
+            frappe.msgprint("Toggle from settings");
+        });
+    },
 
-            window.print_kot_qz(payload);
+    formatters: {
+        order_status(value, df, doc) {
+
+            if (value === "New") {
+
+                return `
+                    <button class="btn btn-xs btn-success accept-btn"
+                        data-name="${doc.name}">
+                        Accept
+                    </button>
+                    <button class="btn btn-xs btn-danger deny-btn"
+                        data-name="${doc.name}">
+                        Deny
+                    </button>
+                `;
+            }
+
+            return value;
+        }
+    },
+
+    onload(listview) {
+
+        // Accept
+        $(document).on("click", ".accept-btn", function () {
+
+            const name = $(this).data("name");
+
+            frappe.db.set_value("Order", name, {
+                order_status: "Accepted"
+            });
+        });
+
+        // Deny
+        $(document).on("click", ".deny-btn", function () {
+
+            const name = $(this).data("name");
+
+            frappe.db.set_value("Order", name, {
+                order_status: "Cancelled"
+            });
         });
     }
 };

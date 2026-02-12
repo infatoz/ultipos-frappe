@@ -1,42 +1,79 @@
-console.log("🔥 KOT PRINT JS LOADED");
+// console.log("🔥 KOT Bridge Listener Started");
 
-window.print_kot_qz = async function (payload) {
-    console.log("🖨️ PRINTING KOT", payload);
+// const BRIDGE_URL = "http://127.0.0.1:8181/print";
+
+// async function sendToBridge(payload) {
+//     try {
+//         console.log("🧾 Sending to bridge →", payload);
+
+//         await fetch(BRIDGE_URL, {
+//             method: "POST",
+//             headers: { "Content-Type": "application/json" },
+//             body: JSON.stringify(payload)
+//         });
+
+//         console.log("✅ Sent to local bridge");
+
+//     } catch (e) {
+//         console.error("❌ Bridge not reachable", e);
+
+//         frappe.show_alert({
+//             message: "Print Bridge not running",
+//             indicator: "red"
+//         });
+//     }
+// }
+
+// /* GLOBAL realtime listener */
+// frappe.realtime.on("kot_print", payload => {
+//     console.log("🧾 KOT event received → sending", payload);
+//     sendToBridge(payload);
+// });
+
+
+console.log("🔥 KOT Bridge Listener Booting...");
+
+const BRIDGE_URL = "http://127.0.0.1:8181/print";
+
+/* =========================================
+   SEND TO FLUTTER BRIDGE
+========================================= */
+async function sendToBridge(payload) {
+
+    console.log("🧾 Sending to bridge →", payload);
 
     try {
-        await ensureQZ(); // 🔑 IMPORTANT
-
-        for (const p of payload.printers) {
-            const config = qz.configs.create({
-                host: p.printer_name,
-                port: 9100,
-                forceRaw: true
-            });
-
-            const data = [
-                "\x1B\x40",
-                "\x1B\x61\x01",
-                "KOT\n",
-                "----------------------\n",
-                `Order: ${payload.order_number}\n`,
-                "----------------------\n"
-            ];
-
-            p.items.forEach(i => {
-                data.push(`${i.qty} x ${i.item_name}\n`);
-            });
-
-            data.push("\n\n\n\x1D\x56\x00");
-
-            await qz.print(config, data);
-        }
-
-        console.log("✅ KOT PRINT SUCCESS");
-    } catch (e) {
-        console.error("❌ KOT PRINT FAILED", e);
-        frappe.show_alert({
-            message: "Printer / QZ error",
-            indicator: "red"
+        await fetch(BRIDGE_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
         });
+
+        console.log("✅ Sent to local bridge");
+
+    } catch (e) {
+        console.error("❌ Bridge not reachable", e);
     }
-};
+}
+
+/* =========================================
+   WAIT FOR SOCKET CONNECTION
+========================================= */
+
+function attachRealtimeListener() {
+
+    if (!frappe.realtime || !frappe.realtime.socket) {
+        console.log("⏳ Waiting for realtime socket...");
+        setTimeout(attachRealtimeListener, 500);
+        return;
+    }
+
+    console.log("✅ Realtime socket connected. Attaching KOT listener...");
+
+    frappe.realtime.on("kot_print", payload => {
+        console.log("🧾 KOT event received → sending", payload);
+        sendToBridge(payload);
+    });
+}
+
+attachRealtimeListener();

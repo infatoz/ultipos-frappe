@@ -5,21 +5,15 @@ def restaurant_permission_query(user):
     Permission Query for Restaurant
     Only assigned Restaurant Owner can see their restaurant
     """
-
-    # System User (UltiPOS Admin) → see all
-    user_roles = frappe.get_all("Has Role", filters={"parent": user}, fields=["role"])
-    roles = [r.role for r in user_roles]
+    roles = frappe.get_roles(user)
     
+    # System Manager sees everything
     if "System Manager" in roles:
         return "1=1"
 
-    # Get restaurant assigned to logged-in user
-    user_restaurant = frappe.db.get_value("User", user, "restaurant")
-    print("user_restaurant", user_restaurant)
+    # Restaurant Owner only sees records where they are the owner_user
+    if "Restaurant Owner" in roles:
+        return f"owner_user = {frappe.db.escape(user)}"
 
-    # Restaurant Owner → only their restaurant
-    if user_restaurant:
-        return f"name = {frappe.db.escape(user_restaurant)}"
-
-    # No restaurant assigned → see nothing
+    # Fallback
     return "1=0"

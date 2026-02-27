@@ -139,8 +139,9 @@ doc_events = {
 # Permissions evaluated in scripted ways
 
 permission_query_conditions = {
-"Outlet": "ultipos.permissions.outlet.outlet_permission_query",
-"Restaurant": "ultipos.permissions.restaurant.restaurant_permission_query"
+    "Outlet": "ultipos.permissions.outlet.outlet_permission_query",
+    "Restaurant": "ultipos.permissions.restaurant.restaurant_permission_query",
+    "User": "ultipos.permissions.user.user_permission_query"
 }
 #
 # has_permission = {

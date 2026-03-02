@@ -20,7 +20,8 @@
   "email",
   "is_accepting_orders",
   "pos_type",
-  "pos_outlet_id"
+  "pos_outlet_id",
+  "outlet_manager"
  ],
  "fields": [
   {
@@ -125,12 +126,18 @@
    "label": "Outlet Code",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "fieldname": "outlet_manager",
+   "fieldtype": "Link",
+   "label": "Outlet Manager",
+   "options": "User"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-13 02:43:27.428561",
+ "modified": "2026-02-27 18:20:54.576744",
  "modified_by": "Administrator",
  "module": "Ultipos",
  "name": "Outlet",
@@ -157,7 +164,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Guest",
+   "role": "Restaurant Owner",
    "share": 1,
    "write": 1
   }

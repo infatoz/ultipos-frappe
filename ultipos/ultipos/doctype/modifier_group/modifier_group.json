@@ -9,7 +9,8 @@
   "group_name",
   "required",
   "min_qty",
-  "max_qty"
+  "max_qty",
+  "restaurant"
  ],
  "fields": [
   {
@@ -41,12 +42,18 @@
    "label": "Max",
    "non_negative": 1,
    "reqd": 1
+  },
+  {
+   "fieldname": "restaurant",
+   "fieldtype": "Link",
+   "label": "Restaurant",
+   "options": "Restaurant"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-08 22:44:56.333117",
+ "modified": "2026-03-02 22:36:43.427136",
  "modified_by": "Administrator",
  "module": "Ultipos",
  "name": "Modifier Group",

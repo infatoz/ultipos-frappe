@@ -141,7 +141,14 @@ doc_events = {
 permission_query_conditions = {
     "Outlet": "ultipos.permissions.outlet.outlet_permission_query",
     "Restaurant": "ultipos.permissions.restaurant.restaurant_permission_query",
-    "User": "ultipos.permissions.user.user_permission_query"
+    "User": "ultipos.permissions.user.user_permission_query",
+    "Menu": "ultipos.permissions.menu.menu_permission_query",
+    "Menu Category": "ultipos.permissions.menu_category.menu_category_permission_query",
+    "Menu Item": "ultipos.permissions.menu_item.menu_item_permission_query",
+    "Printer": "ultipos.permissions.printer.printer_permission_query",
+    "Modifier Group": "ultipos.permissions.modifier_group.modifier_group_permission_query",
+    "Modifier Option": "ultipos.permissions.modifier_option.modifier_option_permission_query",
+    "Order": "ultipos.permissions.order.order_permission_query",
 }
 #
 # has_permission = {

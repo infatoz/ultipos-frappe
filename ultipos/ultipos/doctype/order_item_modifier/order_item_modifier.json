@@ -16,18 +16,20 @@
   {
    "fieldname": "modifier_name",
    "fieldtype": "Data",
-   "label": "Modifier Name",
-   "unique": 1
+   "in_list_view": 1,
+   "label": "Modifier Name"
   },
   {
    "fieldname": "qty",
    "fieldtype": "Int",
+   "in_list_view": 1,
    "label": "Qty",
    "non_negative": 1
   },
   {
    "fieldname": "price",
    "fieldtype": "Currency",
+   "in_list_view": 1,
    "label": "Price",
    "non_negative": 1,
    "precision": "2"
@@ -41,6 +43,7 @@
   {
    "fieldname": "item_name",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Item Name"
   }
  ],
@@ -48,7 +51,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-01-20 20:21:37.932142",
+ "modified": "2026-03-03 19:26:38.734726",
  "modified_by": "Administrator",
  "module": "Ultipos",
  "name": "Order Item Modifier",

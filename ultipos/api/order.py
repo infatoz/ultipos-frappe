@@ -63,14 +63,44 @@ def place(order_data):
     # ----------------------------
     # Order Items
     # ----------------------------
+    # ----------------------------
+    # Order Items
+    # ----------------------------
     for it in items:
         row = order.append("order_item", {})
         row.menu_item = it.get("menu_item")
         row.item_name = it.get("item_name")
-        row.qty = int(it.get("qty", 1))
-        row.unit_price = float(it.get("unit_price", 0))
-        row.total_price = float(it.get("total_price", 0))
+        
+        parent_qty = int(it.get("qty", 1))
+        row.qty = parent_qty
         row.show_in_kds = it.get("show_in_kds", 1)
+        
+        mods = it.get("modifiers", [])
+        
+        # 1. Figure out how much of the unit price is just from modifiers
+        mod_cost_per_item = sum(float(m.get("price", 0)) for m in mods)
+        
+        # 2. Subtract the modifiers to get the TRUE base price (120 - 20 = 100)
+        bundled_unit_price = float(it.get("unit_price", 0))
+        row.unit_price = bundled_unit_price - mod_cost_per_item
+        
+        # The line total remains the same (Idly + Chutney) * Qty
+        row.total_price = float(it.get("total_price", 0))
+        
+        # 3. Save the Modifiers
+        if mods:
+            row.modifiers = json.dumps(mods)
+            
+            for m in mods:
+                mod_row = order.append("order_item_modifier", {})
+                mod_row.modifier_name = m.get("name")
+                mod_row.price = float(m.get("price", 0))
+                
+                # Make sure if they order 2 Idlys, the kitchen knows to make 2 Extra Chutneys!
+                m_qty = int(m.get("qty", 1))
+                mod_row.qty = m_qty * parent_qty
+                
+                mod_row.item_name = it.get("item_name")
 
         total_amount += row.total_price
 
@@ -503,15 +533,27 @@ def get_status(order_id: str):
     # ---------------------------
     # Items
     # ---------------------------
+    # ---------------------------
+    # Items
+    # ---------------------------
     items = []
     for it in order.order_item:
+        # 🎯 NEW: Parse the string back into a list
+        parsed_mods = []
+        if getattr(it, "modifiers", None):
+            try:
+                parsed_mods = json.loads(it.modifiers)
+            except Exception:
+                pass
+
         items.append({
             "menu_item": it.menu_item,
             "item_name": it.item_name,
             "qty": it.qty,
             "unit_price": it.unit_price,
             "total_price": it.total_price,
-            "show_in_kds": it.show_in_kds
+            "show_in_kds": it.show_in_kds,
+            "modifiers": parsed_mods  # 🎯 Add them to the response
         })
 
     # ---------------------------
@@ -596,3 +638,28 @@ def get_status(order_id: str):
         "created_at": order.creation,
         "last_updated": order.modified
     }
+
+
+@frappe.whitelist(allow_guest=True)
+def mark_paid(order_id, transaction_id=None):
+    """
+    Marks an existing order as paid and saves the transaction ID.
+    """
+    if not order_id:
+        frappe.throw("order_id is required")
+
+    try:
+        # 1. Fetch the order we just created (ignore permissions for guest checkout)
+        order = frappe.get_doc("Order", order_id, ignore_permissions=True)
+        
+        # 2. Update the payment_status field (which you set to "Awaiting" in your place function)
+        order.db_set("payment_status", "Paid")
+        
+        # 3. Commit the changes to the database
+        frappe.db.commit()
+        
+        return {"success": True, "message": "Order successfully marked as paid!"}
+        
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), f"Payment Error for {order_id}")
+        frappe.throw(f"Failed to process payment: {str(e)}")

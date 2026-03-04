@@ -149,6 +149,7 @@ permission_query_conditions = {
     "Modifier Group": "ultipos.permissions.modifier_group.modifier_group_permission_query",
     "Modifier Option": "ultipos.permissions.modifier_option.modifier_option_permission_query",
     "Order": "ultipos.permissions.order.order_permission_query",
+    "Coupon": "ultipos.permissions.coupon.get_permission_query_conditions",
 }
 #
 # has_permission = {

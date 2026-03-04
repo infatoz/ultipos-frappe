@@ -2,8 +2,135 @@ import frappe
 import json
 from frappe.model.naming import make_autoname
 from frappe.utils import now
+from ultipos.api.coupon import validate_coupon
 
 @frappe.whitelist(allow_guest=True)
+# def place(order_data):
+#     # ----------------------------
+#     # Parse order_data
+#     # ----------------------------
+#     if isinstance(order_data, str):
+#         order_data = json.loads(order_data)
+
+#     # ----------------------------
+#     # Validate basics
+#     # ----------------------------
+#     outlet_code = order_data.get("outlet_code")
+#     customer_id = order_data.get("customer_id")
+#     items = order_data.get("items")
+
+#     if not outlet_code:
+#         frappe.throw("outlet_code is required")
+
+#     if not customer_id:
+#         frappe.throw("customer_id is required")
+
+#     if not items:
+#         frappe.throw("Items required")
+
+#     # items may come as string
+#     if isinstance(items, str):
+#         items = json.loads(items)
+
+#     # ----------------------------
+#     # Fetch Outlet + Restaurant
+#     # ----------------------------
+#     outlet = frappe.get_doc(
+#         "Outlet",
+#         {"outlet_code": outlet_code},
+#         ignore_permissions=True
+#     )
+
+#     if not outlet:
+#         frappe.throw(f"Outlet {outlet_code} not found")
+
+#     # ----------------------------
+#     # Create Order
+#     # ----------------------------
+#     order = frappe.new_doc("Order")
+#     order.flags.ignore_permissions = True
+#     order.order_number = make_autoname("ORD-.YYYY.-.#####")
+#     order.restaurant = outlet.restaurant
+#     order.outlet = outlet.name
+#     order.platform = order_data.get("platform", "Web")
+#     order.order_type = order_data.get("order_type", "Delivery")
+#     order.order_status = "New"
+#     order.payment_status = "Awaiting"
+#     order.order_time = now()
+#     order.notes = order_data.get("notes")
+
+#     total_amount = 0
+
+#     # ----------------------------
+#     # Order Items
+#     # ----------------------------
+#     # ----------------------------
+#     # Order Items
+#     # ----------------------------
+#     for it in items:
+#         row = order.append("order_item", {})
+#         row.menu_item = it.get("menu_item")
+#         row.item_name = it.get("item_name")
+        
+#         parent_qty = int(it.get("qty", 1))
+#         row.qty = parent_qty
+#         row.show_in_kds = it.get("show_in_kds", 1)
+        
+#         mods = it.get("modifiers", [])
+        
+#         # 1. Figure out how much of the unit price is just from modifiers
+#         mod_cost_per_item = sum(float(m.get("price", 0)) for m in mods)
+        
+#         # 2. Subtract the modifiers to get the TRUE base price (120 - 20 = 100)
+#         bundled_unit_price = float(it.get("unit_price", 0))
+#         row.unit_price = bundled_unit_price - mod_cost_per_item
+        
+#         # The line total remains the same (Idly + Chutney) * Qty
+#         row.total_price = float(it.get("total_price", 0))
+        
+#         # 3. Save the Modifiers
+#         if mods:
+#             row.modifiers = json.dumps(mods)
+            
+#             for m in mods:
+#                 mod_row = order.append("order_item_modifier", {})
+#                 mod_row.modifier_name = m.get("name")
+#                 mod_row.price = float(m.get("price", 0))
+                
+#                 # Make sure if they order 2 Idlys, the kitchen knows to make 2 Extra Chutneys!
+#                 m_qty = int(m.get("qty", 1))
+#                 mod_row.qty = m_qty * parent_qty
+                
+#                 mod_row.item_name = it.get("item_name")
+
+#         total_amount += row.total_price
+
+#     order.total_amount = total_amount
+
+#     # ----------------------------
+#     # Order Customer (Child Table)
+#     # ----------------------------
+#     order.append("order_customer", {
+#         "customer": customer_id,
+#         "name1": order_data.get("customer_name"),
+#         "phone": order_data.get("customer_phone"),
+#         "email": order_data.get("customer_email"),
+#         "delivery_address": order_data.get("delivery_address")
+#     })
+
+#     # ----------------------------
+#     # Save
+#     # ----------------------------
+#     order.insert()
+#     frappe.db.commit()
+
+#     return {
+#         "order_id": order.name,
+#         "status": order.order_status,
+#         "amount": order.total_amount
+#     }
+
+
 def place(order_data):
     # ----------------------------
     # Parse order_data
@@ -63,9 +190,6 @@ def place(order_data):
     # ----------------------------
     # Order Items
     # ----------------------------
-    # ----------------------------
-    # Order Items
-    # ----------------------------
     for it in items:
         row = order.append("order_item", {})
         row.menu_item = it.get("menu_item")
@@ -80,11 +204,11 @@ def place(order_data):
         # 1. Figure out how much of the unit price is just from modifiers
         mod_cost_per_item = sum(float(m.get("price", 0)) for m in mods)
         
-        # 2. Subtract the modifiers to get the TRUE base price (120 - 20 = 100)
+        # 2. Subtract the modifiers to get the TRUE base price
         bundled_unit_price = float(it.get("unit_price", 0))
         row.unit_price = bundled_unit_price - mod_cost_per_item
         
-        # The line total remains the same (Idly + Chutney) * Qty
+        # The line total remains the same
         row.total_price = float(it.get("total_price", 0))
         
         # 3. Save the Modifiers
@@ -96,7 +220,7 @@ def place(order_data):
                 mod_row.modifier_name = m.get("name")
                 mod_row.price = float(m.get("price", 0))
                 
-                # Make sure if they order 2 Idlys, the kitchen knows to make 2 Extra Chutneys!
+                # Make sure if they order 2 items, the kitchen knows to make 2 modifiers!
                 m_qty = int(m.get("qty", 1))
                 mod_row.qty = m_qty * parent_qty
                 
@@ -104,7 +228,30 @@ def place(order_data):
 
         total_amount += row.total_price
 
-    order.total_amount = total_amount
+    # ----------------------------
+    # 🎯 NEW: Coupon & Discount Logic
+    # ----------------------------
+    subtotal = total_amount
+    discount_amount = 0
+    coupon_code = order_data.get("coupon_code")
+
+    if coupon_code:
+        try:
+            # Run your coupon.py logic securely on the backend
+            coupon_res = validate_coupon(outlet_code, coupon_code, subtotal)
+            if coupon_res and coupon_res.get("valid"):
+                discount_amount = coupon_res.get("discount", 0)
+                
+                # Save the actual text code to the database if the field exists
+                order.coupon_code = coupon_code 
+        except Exception as e:
+            # If the coupon is invalid/expired, we log it but don't crash the order
+            frappe.log_error(f"Coupon failed: {str(e)}", "Coupon Error")
+            pass
+
+    # Lock in the final math
+    order.discount_amount = discount_amount
+    order.total_amount = subtotal - discount_amount
 
     # ----------------------------
     # Order Customer (Child Table)
@@ -128,7 +275,6 @@ def place(order_data):
         "status": order.order_status,
         "amount": order.total_amount
     }
-
 
 # def place(order_data):
 #     # --------------------

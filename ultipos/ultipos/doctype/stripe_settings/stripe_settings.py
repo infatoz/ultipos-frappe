@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class OnlineStoreSettings(Document):
+class StripeSettings(Document):
 	pass

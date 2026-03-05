@@ -6,40 +6,31 @@
  "engine": "InnoDB",
  "field_order": [
   "outlet",
+  "phone_number",
+  "email",
+  "address",
   "about_us",
   "privacy_policy",
-  "refund_policy",
-  "contact_info",
-  "address",
-  "email",
-  "phone"
+  "terms_and_conditions"
  ],
  "fields": [
   {
    "fieldname": "outlet",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Outlet",
-   "options": "Outlet"
+   "options": "Outlet",
+   "reqd": 1
   },
   {
    "fieldname": "about_us",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "label": "About Us"
   },
   {
    "fieldname": "privacy_policy",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "label": "Privacy Policy"
-  },
-  {
-   "fieldname": "refund_policy",
-   "fieldtype": "Small Text",
-   "label": "Refund Policy"
-  },
-  {
-   "fieldname": "contact_info",
-   "fieldtype": "Small Text",
-   "label": "Contact Info"
   },
   {
    "fieldname": "address",
@@ -52,15 +43,20 @@
    "label": "Email"
   },
   {
-   "fieldname": "phone",
+   "fieldname": "phone_number",
    "fieldtype": "Data",
-   "label": "Phone"
+   "label": "Phone_number"
+  },
+  {
+   "fieldname": "terms_and_conditions",
+   "fieldtype": "Text Editor",
+   "label": "Terms And Conditions"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-20 20:15:55.087754",
+ "modified": "2026-03-05 20:57:33.236534",
  "modified_by": "Administrator",
  "module": "Ultipos",
  "name": "Store Info",
@@ -75,6 +71,30 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Outlet Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Restaurant Owner",
    "share": 1,
    "write": 1
   }

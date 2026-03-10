@@ -21,7 +21,8 @@
   "is_accepting_orders",
   "pos_type",
   "pos_outlet_id",
-  "outlet_manager"
+  "outlet_manager",
+  "auto_accept_orders"
  ],
  "fields": [
   {
@@ -132,12 +133,18 @@
    "fieldtype": "Link",
    "label": "Outlet Manager",
    "options": "User"
+  },
+  {
+   "default": "0",
+   "fieldname": "auto_accept_orders",
+   "fieldtype": "Check",
+   "label": "Auto Accept Orders"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-27 18:20:54.576744",
+ "modified": "2026-03-10 19:33:35.851228",
  "modified_by": "Administrator",
  "module": "Ultipos",
  "name": "Outlet",

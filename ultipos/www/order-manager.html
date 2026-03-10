@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Manager - UltiPOS</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: #f1f5f9; color: #1e293b; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Sidebar */
+        .sidebar { width: 250px; background: #ffffff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; }
+        .logo-area { padding: 1.5rem; border-bottom: 1px solid #e2e8f0; font-weight: 800; font-size: 1.5rem; color: #0f172a; }
+        .logo-area span { color: #f97316; }
+        .nav-item { padding: 1rem 1.5rem; cursor: pointer; font-weight: 600; color: #64748b; border-left: 4px solid transparent; display: flex; justify-content: space-between; align-items: center; }
+        .nav-item:hover { background: #f8fafc; color: #0f172a; }
+        .nav-item.active { background: #fff7ed; color: #ea580c; border-left-color: #ea580c; }
+        .badge { background: #e2e8f0; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; }
+        .badge.alert { background: #ef4444; color: white; animation: pulse 1.5s infinite; }
+
+        /* Main Content */
+        .main { flex: 1; display: flex; flex-direction: column; }
+        
+        /* Topbar */
+        .topbar { background: #ffffff; padding: 1rem 2rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .store-info { font-weight: 700; font-size: 1.1rem; display: flex; gap: 10px; align-items: center; }
+        .clock { font-size: 0.9rem; color: #64748b; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; }
+        .controls { display: flex; gap: 1.5rem; align-items: center; }
+        
+        /* Toggles */
+        .toggle-label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+        .toggle-btn { appearance: none; width: 40px; height: 22px; background: #cbd5e1; border-radius: 20px; position: relative; cursor: pointer; outline: none; transition: 0.3s; }
+        .toggle-btn::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: white; border-radius: 50%; transition: 0.3s; }
+        .toggle-btn:checked { background: #10b981; }
+        .toggle-btn:checked::after { transform: translateX(18px); }
+        .logout-btn { padding: 6px 16px; background: #f1f5f9; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: #475569; }
+
+        /* Board */
+        .board { padding: 2rem; overflow-y: auto; flex: 1; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+        
+        /* Order Card */
+        .card { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; transition: 0.2s; }
+        .card:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .card.is-new { border-left: 5px solid #ef4444; }
+        .c-header { display: flex; justify-content: space-between; margin-bottom: 1rem; }
+        .c-id { font-weight: 800; font-size: 1.1rem; }
+        .c-time { font-size: 0.85rem; color: #64748b; }
+        .c-body { margin-bottom: 1.5rem; line-height: 1.6; }
+        .c-actions { display: flex; gap: 10px; }
+        .btn { flex: 1; padding: 10px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .btn-accept { background: #10b981; color: white; }
+        .btn-accept:hover { background: #059669; }
+        .btn-decline { background: #fee2e2; color: #ef4444; }
+        .btn-decline:hover { background: #fca5a5; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        
+        /* Audio overlay hack */
+        #audio-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
+    </style>
+</head>
+<body>
+    <div id="audio-overlay" onclick="startShift()">
+        <h2>👋 Welcome to your shift</h2>
+        <p style="margin-top: 10px; color: #cbd5e1;">Click anywhere to enable order alerts and start.</p>
+    </div>
+
+    <div class="sidebar">
+        <div class="logo-area">Ulti<span>POS</span></div>
+        <div style="padding: 1rem; font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Order Views</div>
+        
+        <div class="nav-item active" onclick="setFilter('New')">
+            Incoming <span class="badge alert" id="count-new">0</span>
+        </div>
+        <div class="nav-item" onclick="setFilter('Accepted')">
+            Accepted <span class="badge" id="count-accepted">0</span>
+        </div>
+        <div class="nav-item" onclick="setFilter('Preparing')">
+            Preparing <span class="badge" id="count-preparing">0</span>
+        </div>
+        <div class="nav-item" onclick="setFilter('Ready')">
+            Ready <span class="badge" id="count-ready">0</span>
+        </div>
+        <div class="nav-item" onclick="setFilter('Completed')">
+            Completed <span class="badge" id="count-completed">0</span>
+        </div>
+        <div class="nav-item" onclick="setFilter('Cancelled')">
+            Declined <span class="badge" id="count-cancelled">0</span>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="topbar">
+            <div class="store-info">
+                <span id="store-name">Loading...</span>
+                <span class="clock" id="live-clock">--:-- --</span>
+            </div>
+            <div class="controls">
+                <label class="toggle-label">
+                    <input type="checkbox" class="toggle-btn" id="toggle-active" onchange="updateSetting('is_accepting_orders')">
+                    Store Online
+                </label>
+                <label class="toggle-label">
+                    <input type="checkbox" class="toggle-btn" id="toggle-auto" onchange="updateSetting('auto_accept_orders')">
+                    Auto-Accept
+                </label>
+                <button class="logout-btn" onclick="window.location.href='/app'">Exit Dashboard</button>
+            </div>
+        </div>
+
+        <div class="board">
+            <h2 style="margin-bottom: 1.5rem;" id="view-title">Incoming Orders</h2>
+            <div class="grid" id="order-grid">
+            </div>
+        </div>
+    </div>
+
+    <audio id="alert-sound">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        const currentUser = "{{ frappe.session.user }}";
+        if (currentUser === "Guest") window.location.href = "/login?redirect-to=/order-manager";
+        window.csrf_token = "{{ frappe.session.csrf_token }}";
+
+        let allOrders = [];
+        let currentFilter = 'New';
+        let myOutlet = '';
+        let knownOrders = new Set(); // Tracks orders we've already beeped for
+        let isAutoAcceptOn = false;
+
+        // Live Clock
+        // 🎯 THE FIX: Force the live clock into Australian Eastern Time
+        setInterval(() => {
+            document.getElementById('live-clock').innerText = new Date().toLocaleTimeString('en-AU', {
+                timeZone: 'Australia/Sydney', // Change to 'Australia/Perth' or 'Australia/Melbourne' if needed
+                hour: '2-digit', 
+                minute:'2-digit'
+            });
+        }, 1000);
+
+        function startShift() {
+            document.getElementById('audio-overlay').style.display = 'none';
+            // Unlock audio engine
+            document.getElementById('alert-sound').play().then(() => {
+                document.getElementById('alert-sound').pause();
+            }).catch(e => console.log("Audio unlock failed", e));
+        }
+
+        async function fetchDashboard() {
+            try {
+                const res = await fetch('/api/method/ultipos.api.order_manager.get_dashboard_data?_t=' + Date.now());
+                const data = await res.json();
+
+                if(data.message && data.message.orders) {
+                    allOrders = data.message.orders;
+                    myOutlet = data.message.outlet;
+                    isAutoAcceptOn = data.message.settings.auto_accept_orders;
+                    
+                    document.getElementById('store-name').innerText = `${data.message.settings.outlet_name || myOutlet} | ${new Date().toLocaleDateString()}`;
+                    
+                    if(document.activeElement.type !== "checkbox") {
+                        document.getElementById('toggle-active').checked = data.message.settings.is_accepting_orders;
+                        document.getElementById('toggle-auto').checked = isAutoAcceptOn;
+                    }
+
+                    updateSidebarCounts();
+                    renderGrid();
+                    handleAudioAlert();
+                }
+            } catch (e) { console.error("Fetch error", e); }
+        }
+
+        function updateSidebarCounts() {
+            const counts = { New: 0, Accepted: 0, Preparing: 0, Ready: 0, Completed: 0, Cancelled: 0 };
+            allOrders.forEach(o => { if(counts[o.order_status] !== undefined) counts[o.order_status]++; });
+            for(let key in counts) { document.getElementById(`count-${key.toLowerCase()}`).innerText = counts[key]; }
+        }
+
+        function handleAudioAlert() {
+            const audio = document.getElementById('alert-sound');
+            let hasPendingNew = false;
+            let justAutoAccepted = false;
+
+            allOrders.forEach(o => {
+                if (o.order_status === "New") hasPendingNew = true;
+                
+                if (!knownOrders.has(o.name)) {
+                    knownOrders.add(o.name);
+                    // If it bypassed "New" directly to "Accepted" because of Auto-Accept!
+                    if (o.order_status === "Accepted" && isAutoAcceptOn) {
+                        justAutoAccepted = true;
+                    }
+                }
+            });
+
+            // If manual mode: loop infinitely until FOH clicks accept
+            if (hasPendingNew) {
+                audio.loop = true;
+                audio.play().catch(()=>{});
+            } 
+            // If auto-accept mode: play exactly TWICE and stop
+            else if (justAutoAccepted) {
+                audio.loop = false;
+                audio.play().catch(()=>{});
+                let playCount = 1;
+                audio.onended = function() {
+                    if (playCount < 2) {
+                        playCount++;
+                        audio.play();
+                    } else {
+                        audio.onended = null; // Clean up
+                    }
+                };
+            } 
+            // Silence
+            else {
+                audio.pause();
+                audio.onended = null;
+            }
+        }
+
+        function setFilter(status) {
+            currentFilter = status;
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            document.getElementById('view-title').innerText = status === 'New' ? 'Incoming Orders' : `${status} Orders`;
+            renderGrid();
+        }
+
+function renderGrid() {
+            const filtered = allOrders.filter(o => o.order_status === currentFilter);
+            const grid = document.getElementById('order-grid');
+            
+            if (filtered.length === 0) {
+                grid.innerHTML = `<p style="color: #94a3b8; grid-column: 1/-1;">No ${currentFilter.toLowerCase()} orders right now.</p>`;
+                return;
+            }
+
+            let html = "";
+            filtered.forEach(o => {
+                const isNew = o.order_status === 'New';
+                const total = new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(o.total_amount);
+
+                // 🎯 NEW: Build the HTML for the Food Items!
+                let itemsListHtml = `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #cbd5e1; font-size: 0.9rem;">`;
+                
+                if (o.items && o.items.length > 0) {
+                    o.items.forEach(it => {
+                        let modsStr = "";
+                        // Parse modifiers safely
+                        if (it.modifiers && it.modifiers !== "[]" && it.modifiers !== "null") {
+                            try {
+                                let parsed = typeof it.modifiers === 'string' ? JSON.parse(it.modifiers) : it.modifiers;
+                                if (Array.isArray(parsed) && parsed.length > 0) {
+                                    modsStr = `<br><span style="color:#64748b; font-size: 0.8rem; padding-left: 20px;">+ ${parsed.map(m => m.name).join(", ")}</span>`;
+                                }
+                            } catch(e) {}
+                        }
+                        
+                        itemsListHtml += `<div style="margin-bottom: 6px; color: #334155;">
+                                            <b style="color:#ea580c;">${it.qty}x</b> <b>${it.item_name}</b> ${modsStr}
+                                          </div>`;
+                    });
+                } else {
+                    itemsListHtml += `<div style="color: #94a3b8; font-style: italic;">No items found</div>`;
+                }
+                itemsListHtml += `</div>`;
+
+                html += `<div class="card ${isNew ? 'is-new' : ''}">
+                            <div class="c-header">
+                                <span class="c-id">${o.order_number}</span>
+                                <span class="c-time">${o.order_time}</span>
+                            </div>
+                            <div class="c-body">
+                                <b>${o.customer_name}</b><br>
+                                <span style="color: #64748b;">${o.order_type} • ${o.payment_status}</span><br>
+                                <b style="font-size: 1.2rem; color: #0f172a; display: block; margin-top: 8px;">${total}</b>
+                                
+                                ${itemsListHtml}
+                            </div>`;
+                
+                if (isNew) {
+                    html += `<div class="c-actions">
+                                <button class="btn btn-decline" onclick="changeStatus('${o.name}', 'Cancelled')">Decline</button>
+                                <button class="btn btn-accept" onclick="changeStatus('${o.name}', 'Accepted')">Accept to KDS</button>
+                             </div>`;
+                } else if (o.order_status === 'Ready') {
+                    html += `<div class="c-actions">
+                                <button class="btn btn-accept" onclick="changeStatus('${o.name}', 'Completed')">Mark Picked Up</button>
+                             </div>`;
+                }
+
+                html += `</div>`;
+            });
+            grid.innerHTML = html;
+        }
+        async function changeStatus(orderId, newStatus) {
+            try {
+                await fetch('/api/method/ultipos.api.order_manager.update_order_status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': window.csrf_token },
+                    body: JSON.stringify({ order_id: orderId, new_status: newStatus })
+                });
+                fetchDashboard(); 
+            } catch (e) { console.error("Update failed", e); }
+        }
+
+        async function updateSetting(field) {
+            const isChecked = event.target.checked;
+            try {
+                await fetch('/api/method/ultipos.api.order_manager.toggle_setting', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': window.csrf_token },
+                    body: JSON.stringify({ outlet: myOutlet, field: field, value: isChecked ? 1 : 0 })
+                });
+            } catch (e) { console.error("Setting update failed", e); }
+        }
+
+        setInterval(fetchDashboard, 4000);
+        fetchDashboard();
+    </script>
+</body>
+</html>

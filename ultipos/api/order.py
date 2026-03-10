@@ -4,58 +4,44 @@ from frappe.model.naming import make_autoname
 from frappe.utils import now
 from ultipos.api.coupon import validate_coupon
 
-@frappe.whitelist(allow_guest=True)
 
+@frappe.whitelist(allow_guest=True)
 def place(order_data):
-    # ----------------------------
-    # Parse order_data
-    # ----------------------------
     if isinstance(order_data, str):
         order_data = json.loads(order_data)
 
-    # ----------------------------
-    # Validate basics
-    # ----------------------------
     outlet_code = order_data.get("outlet_code")
     customer_id = order_data.get("customer_id")
     items = order_data.get("items")
 
-    if not outlet_code:
-        frappe.throw("outlet_code is required")
+    if not outlet_code: frappe.throw("outlet_code is required")
+    if not customer_id: frappe.throw("customer_id is required")
+    if not items: frappe.throw("Items required")
 
-    if not customer_id:
-        frappe.throw("customer_id is required")
-
-    if not items:
-        frappe.throw("Items required")
-
-    # items may come as string
     if isinstance(items, str):
         items = json.loads(items)
 
     # ----------------------------
-    # Fetch Outlet + Restaurant
-    # ----------------------------
-    outlet = frappe.get_doc(
-        "Outlet",
-        {"outlet_code": outlet_code},
-        ignore_permissions=True
-    )
-
-    if not outlet:
-        frappe.throw(f"Outlet {outlet_code} not found")
-
-    # ----------------------------
-    # Extract Payment Method
+    # 1. Extract Payment Method FIRST
     # ----------------------------
     payment_info = order_data.get("payment", {})
     if isinstance(payment_info, str):
         payment_info = json.loads(payment_info)
-
     pay_method = payment_info.get("method")
 
     # ----------------------------
-    # Create Order
+    # 2. Fetch Outlet + Enforce Toggles
+    # ----------------------------
+    outlet = frappe.get_doc("Outlet", {"outlet_code": outlet_code}, ignore_permissions=True)
+    if not outlet:
+        frappe.throw(f"Outlet {outlet_code} not found")
+
+    # 🎯 THE FIX: Use the actual field name "is_accepting_orders"
+    if not outlet.is_accepting_orders:
+        frappe.throw("Sorry, this store is currently not accepting new orders.")
+
+    # ----------------------------
+    # 3. Create Order
     # ----------------------------
     order = frappe.new_doc("Order")
     order.flags.ignore_permissions = True
@@ -65,17 +51,29 @@ def place(order_data):
     order.platform = order_data.get("platform", "Web")
     order.order_type = order_data.get("order_type", "Delivery")
     
-    # 🎯 THE FIX: Route to kitchen instantly if COD, otherwise hide as "New"
+    # 🎯 THE FIX: Clean Auto-Accept Logic
+    # ----------------------------
+    # 🎯 THE FIX: Hold Stripe orders in the "Ghost" zone until paid!
+    # ----------------------------
     if pay_method == "COD":
-        order.order_status = "Accepted"
+        # COD goes straight to the FOH (or Kitchen if Auto-Accept is on)
+        if outlet.auto_accept_orders:
+            order.order_status = "Accepted"
+        else:
+            order.order_status = "New"
     else:
-        order.order_status = "New"
+        # STRIPE ONLINE PAYMENT -> Hide it from the staff!
+        order.order_status = "Awaiting Payment"
 
     order.payment_status = "Awaiting"
     order.order_time = now()
     order.notes = order_data.get("notes")
 
     total_amount = 0
+
+    # ----------------------------
+    # Order Items (Keep your existing items loop here)
+    # ----------------------------
 
     # ----------------------------
     # Order Items
@@ -683,19 +681,26 @@ def get_status(order_id: str):
 @frappe.whitelist(allow_guest=True)
 def mark_paid(order_id, transaction_id=None):
     """
-    Marks an existing order as paid and saves the transaction ID.
+    Marks an existing order as paid and releases it to the FOH/Kitchen!
     """
     if not order_id:
         frappe.throw("order_id is required")
 
     try:
-        # 1. Fetch the order we just created (ignore permissions for guest checkout)
+        # 1. Fetch the order we just created
         order = frappe.get_doc("Order", order_id, ignore_permissions=True)
         
-        # 2. Update the payment_status field (which you set to "Awaiting" in your place function)
+        # 2. Mark the money as received
         order.db_set("payment_status", "Paid")
         
-        # 3. Commit the changes to the database
+        # 3. 🎯 THE FIX: Release the order to the restaurant staff!
+        outlet = frappe.get_doc("Outlet", order.outlet, ignore_permissions=True)
+        if outlet.auto_accept_orders:
+            order.db_set("order_status", "Accepted") # Goes straight to Kitchen KDS
+        else:
+            order.db_set("order_status", "New") # Starts ringing on FOH Dashboard
+            
+        # Commit the changes
         frappe.db.commit()
         
         return {"success": True, "message": "Order successfully marked as paid!"}

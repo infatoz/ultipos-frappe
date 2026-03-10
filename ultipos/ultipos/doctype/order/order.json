@@ -76,7 +76,7 @@
    "fieldname": "order_status",
    "fieldtype": "Select",
    "label": "Order Status",
-   "options": "New\nAccepted\nPreparing\nReady\nCompleted\nCancelled",
+   "options": "Awaiting Payment\nNew\nAccepted\nPreparing\nReady\nCompleted\nCancelled",
    "reqd": 1
   },
   {
@@ -155,7 +155,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-13 03:29:49.990221",
+ "modified": "2026-03-10 23:24:31.230312",
  "modified_by": "Administrator",
  "module": "Ultipos",
  "name": "Order",

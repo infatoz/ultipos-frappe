@@ -21,28 +21,21 @@ def place(order_data):
     if isinstance(items, str):
         items = json.loads(items)
 
-    # ----------------------------
-    # 1. Extract Payment Method FIRST
-    # ----------------------------
+    # 1. Extract Payment Method
     payment_info = order_data.get("payment", {})
     if isinstance(payment_info, str):
         payment_info = json.loads(payment_info)
     pay_method = payment_info.get("method")
 
-    # ----------------------------
     # 2. Fetch Outlet + Enforce Toggles
-    # ----------------------------
     outlet = frappe.get_doc("Outlet", {"outlet_code": outlet_code}, ignore_permissions=True)
     if not outlet:
         frappe.throw(f"Outlet {outlet_code} not found")
 
-    # 🎯 THE FIX: Use the actual field name "is_accepting_orders"
     if not outlet.is_accepting_orders:
         frappe.throw("Sorry, this store is currently not accepting new orders.")
 
-    # ----------------------------
     # 3. Create Order
-    # ----------------------------
     order = frappe.new_doc("Order")
     order.flags.ignore_permissions = True
     order.order_number = make_autoname("ORD-.YYYY.-.#####")
@@ -50,40 +43,31 @@ def place(order_data):
     order.outlet = outlet.name
     order.platform = order_data.get("platform", "Web")
     order.order_type = order_data.get("order_type", "Delivery")
-    
-    # 🎯 THE FIX: Clean Auto-Accept Logic
-    # ----------------------------
-    # 🎯 THE FIX: Hold Stripe orders in the "Ghost" zone until paid!
-    # ----------------------------
-    if pay_method == "COD":
-        # COD goes straight to the FOH (or Kitchen if Auto-Accept is on)
-        if outlet.auto_accept_orders:
-            order.order_status = "Accepted"
-        else:
-            order.order_status = "New"
-    else:
-        # STRIPE ONLINE PAYMENT -> Hide it from the staff!
-        order.order_status = "Awaiting Payment"
-
     order.payment_status = "Awaiting"
     order.order_time = now()
     order.notes = order_data.get("notes")
 
+    # 🎯 THE FIX: Only one status block!
+    # 🎯 THE FIX: Bulletproof integer check!
+    is_auto_accept = int(outlet.auto_accept_orders or 0) == 1
+
+    if pay_method == "COD":
+        if is_auto_accept:
+            order.order_status = "Accepted"
+        else:
+            order.order_status = "New"
+    else:
+        # Online Payment -> Hold it in the ghost zone!
+        order.order_status = "Awaiting Payment"
+
     total_amount = 0
 
-    # ----------------------------
-    # Order Items (Keep your existing items loop here)
-    # ----------------------------
-
-    # ----------------------------
-    # Order Items
-    # ----------------------------
+    # 4. Order Items
     for it in items:
         row = order.append("order_item", {})
         row.menu_item = it.get("menu_item")
         row.item_name = it.get("item_name")
         
-        # 🎯 Set KDS Status and catch the customer's Item Note!
         row.item_status = "Received"
         row.notes = it.get("note") 
         
@@ -92,62 +76,44 @@ def place(order_data):
         row.show_in_kds = it.get("show_in_kds", 1)
         
         mods = it.get("modifiers", [])
-        
-        # 1. Figure out how much of the unit price is just from modifiers
         mod_cost_per_item = sum(float(m.get("price", 0)) for m in mods)
         
-        # 2. Subtract the modifiers to get the TRUE base price
         bundled_unit_price = float(it.get("unit_price", 0))
         row.unit_price = bundled_unit_price - mod_cost_per_item
-        
-        # The line total remains the same
         row.total_price = float(it.get("total_price", 0))
         
-        # 3. Save the Modifiers
         if mods:
             row.modifiers = json.dumps(mods)
-            
             for m in mods:
                 mod_row = order.append("order_item_modifier", {})
                 mod_row.modifier_name = m.get("name")
                 mod_row.price = float(m.get("price", 0))
                 
-                # Make sure if they order 2 items, the kitchen knows to make 2 modifiers!
                 m_qty = int(m.get("qty", 1))
                 mod_row.qty = m_qty * parent_qty
-                
                 mod_row.item_name = it.get("item_name")
 
         total_amount += row.total_price
 
-    # ----------------------------
-    # 🎯 NEW: Coupon & Discount Logic
-    # ----------------------------
+    # 5. Coupon & Discount Logic
     subtotal = total_amount
     discount_amount = 0
     coupon_code = order_data.get("coupon_code")
 
     if coupon_code:
         try:
-            # Run your coupon.py logic securely on the backend
             coupon_res = validate_coupon(outlet_code, coupon_code, subtotal)
             if coupon_res and coupon_res.get("valid"):
                 discount_amount = coupon_res.get("discount", 0)
-                
-                # Save the actual text code to the database if the field exists
                 order.coupon_code = coupon_code 
         except Exception as e:
-            # If the coupon is invalid/expired, we log it but don't crash the order
             frappe.log_error(f"Coupon failed: {str(e)}", "Coupon Error")
             pass
 
-    # Lock in the final math
     order.discount_amount = discount_amount
     order.total_amount = subtotal - discount_amount
 
-    # ----------------------------
-    # Order Customer (Child Table)
-    # ----------------------------
+    # 6. Order Customer 
     order.append("order_customer", {
         "customer": customer_id,
         "name1": order_data.get("customer_name"),
@@ -156,9 +122,7 @@ def place(order_data):
         "delivery_address": order_data.get("delivery_address")
     })
 
-    # ----------------------------
-    # Save
-    # ----------------------------
+    # 7. Save
     order.insert()
     frappe.db.commit()
 
@@ -676,8 +640,6 @@ def get_status(order_id: str):
         "created_at": order.creation,
         "last_updated": order.modified
     }
-
-
 @frappe.whitelist(allow_guest=True)
 def mark_paid(order_id, transaction_id=None):
     """
@@ -687,21 +649,28 @@ def mark_paid(order_id, transaction_id=None):
         frappe.throw("order_id is required")
 
     try:
-        # 1. Fetch the order we just created
         order = frappe.get_doc("Order", order_id, ignore_permissions=True)
-        
-        # 2. Mark the money as received
         order.db_set("payment_status", "Paid")
         
-        # 3. 🎯 THE FIX: Release the order to the restaurant staff!
+        # 1. Fetch the full Outlet document to absolutely guarantee we bypass the Redis cache
         outlet = frappe.get_doc("Outlet", order.outlet, ignore_permissions=True)
-        if outlet.auto_accept_orders:
-            order.db_set("order_status", "Accepted") # Goes straight to Kitchen KDS
+        
+        # 2. Strict Integer Check
+        is_auto_accept = int(getattr(outlet, "auto_accept_orders", 0)) == 1
+        
+        # 3. Route safely!
+        if is_auto_accept:
+            order.db_set("order_status", "Accepted") # Goes straight to Kitchen
         else:
             order.db_set("order_status", "New") # Starts ringing on FOH Dashboard
             
-        # Commit the changes
         frappe.db.commit()
+        
+        # 📸 THE SECURITY CAMERA: This secretly writes a log to Frappe Desk!
+        frappe.log_error(
+            f"Order: {order_id} | Auto-Accept was evaluated as: {is_auto_accept} | Final Status: {order.order_status}", 
+            "Payment Debug Trap"
+        )
         
         return {"success": True, "message": "Order successfully marked as paid!"}
         

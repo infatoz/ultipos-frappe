@@ -128,14 +128,13 @@
         let allOrders = [];
         let currentFilter = 'New';
         let myOutlet = '';
-        let knownOrders = new Set(); // Tracks orders we've already beeped for
+        let knownOrders = new Set();
         let isAutoAcceptOn = false;
 
-        // Live Clock
-        // 🎯 THE FIX: Force the live clock into Australian Eastern Time
+        // Aussie Clock
         setInterval(() => {
             document.getElementById('live-clock').innerText = new Date().toLocaleTimeString('en-AU', {
-                timeZone: 'Australia/Sydney', // Change to 'Australia/Perth' or 'Australia/Melbourne' if needed
+                timeZone: 'Australia/Sydney', 
                 hour: '2-digit', 
                 minute:'2-digit'
             });
@@ -143,7 +142,6 @@
 
         function startShift() {
             document.getElementById('audio-overlay').style.display = 'none';
-            // Unlock audio engine
             document.getElementById('alert-sound').play().then(() => {
                 document.getElementById('alert-sound').pause();
             }).catch(e => console.log("Audio unlock failed", e));
@@ -175,7 +173,11 @@
 
         function updateSidebarCounts() {
             const counts = { New: 0, Accepted: 0, Preparing: 0, Ready: 0, Completed: 0, Cancelled: 0 };
-            allOrders.forEach(o => { if(counts[o.order_status] !== undefined) counts[o.order_status]++; });
+            allOrders.forEach(o => { 
+                let st = o.order_status;
+                if (st === "Awaiting Payment") st = "New"; 
+                if(counts[st] !== undefined) counts[st]++; 
+            });
             for(let key in counts) { document.getElementById(`count-${key.toLowerCase()}`).innerText = counts[key]; }
         }
 
@@ -185,38 +187,30 @@
             let justAutoAccepted = false;
 
             allOrders.forEach(o => {
+                // ONLY ring if it is officially "New" (meaning paid via Stripe or COD)
                 if (o.order_status === "New") hasPendingNew = true;
                 
                 if (!knownOrders.has(o.name)) {
-                    knownOrders.add(o.name);
-                    // If it bypassed "New" directly to "Accepted" because of Auto-Accept!
-                    if (o.order_status === "Accepted" && isAutoAcceptOn) {
-                        justAutoAccepted = true;
+                    // Don't mark it as "known" until it leaves the Awaiting Payment state!
+                    if (o.order_status !== "Awaiting Payment") {
+                        knownOrders.add(o.name);
+                        if (o.order_status === "Accepted" && isAutoAcceptOn) justAutoAccepted = true;
                     }
                 }
             });
 
-            // If manual mode: loop infinitely until FOH clicks accept
             if (hasPendingNew) {
                 audio.loop = true;
                 audio.play().catch(()=>{});
-            } 
-            // If auto-accept mode: play exactly TWICE and stop
-            else if (justAutoAccepted) {
+            } else if (justAutoAccepted) {
                 audio.loop = false;
                 audio.play().catch(()=>{});
                 let playCount = 1;
                 audio.onended = function() {
-                    if (playCount < 2) {
-                        playCount++;
-                        audio.play();
-                    } else {
-                        audio.onended = null; // Clean up
-                    }
+                    if (playCount < 2) { playCount++; audio.play(); } 
+                    else { audio.onended = null; }
                 };
-            } 
-            // Silence
-            else {
+            } else {
                 audio.pause();
                 audio.onended = null;
             }
@@ -230,8 +224,12 @@
             renderGrid();
         }
 
-function renderGrid() {
-            const filtered = allOrders.filter(o => o.order_status === currentFilter);
+        function renderGrid() {
+            const filtered = allOrders.filter(o => {
+                if (currentFilter === 'New') return o.order_status === 'New' || o.order_status === 'Awaiting Payment';
+                return o.order_status === currentFilter;
+            });
+            
             const grid = document.getElementById('order-grid');
             
             if (filtered.length === 0) {
@@ -242,15 +240,14 @@ function renderGrid() {
             let html = "";
             filtered.forEach(o => {
                 const isNew = o.order_status === 'New';
+                const isAwaiting = o.order_status === 'Awaiting Payment'; 
+                
                 const total = new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(o.total_amount);
 
-                // 🎯 NEW: Build the HTML for the Food Items!
                 let itemsListHtml = `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #cbd5e1; font-size: 0.9rem;">`;
-                
                 if (o.items && o.items.length > 0) {
                     o.items.forEach(it => {
                         let modsStr = "";
-                        // Parse modifiers safely
                         if (it.modifiers && it.modifiers !== "[]" && it.modifiers !== "null") {
                             try {
                                 let parsed = typeof it.modifiers === 'string' ? JSON.parse(it.modifiers) : it.modifiers;
@@ -259,30 +256,36 @@ function renderGrid() {
                                 }
                             } catch(e) {}
                         }
-                        
                         itemsListHtml += `<div style="margin-bottom: 6px; color: #334155;">
                                             <b style="color:#ea580c;">${it.qty}x</b> <b>${it.item_name}</b> ${modsStr}
                                           </div>`;
                     });
-                } else {
-                    itemsListHtml += `<div style="color: #94a3b8; font-style: italic;">No items found</div>`;
-                }
+                } else { itemsListHtml += `<div style="color: #94a3b8; font-style: italic;">No items found</div>`; }
                 itemsListHtml += `</div>`;
 
-                html += `<div class="card ${isNew ? 'is-new' : ''}">
+                let paymentStatusUI = `<span style="color: #64748b;">${o.order_type} • ${o.payment_status}</span>`;
+                if (isAwaiting) {
+                    paymentStatusUI = `<span style="background: #ffedd5; color: #ea580c; font-weight: 700; padding: 2px 8px; border-radius: 6px; font-size: 0.8rem;">⏳ Customer Paying...</span>`;
+                }
+
+                html += `<div class="card ${isNew ? 'is-new' : ''}" style="${isAwaiting ? 'border-color: #fdba74; opacity: 0.6;' : ''}">
                             <div class="c-header">
                                 <span class="c-id">${o.order_number}</span>
                                 <span class="c-time">${o.order_time}</span>
                             </div>
                             <div class="c-body">
                                 <b>${o.customer_name}</b><br>
-                                <span style="color: #64748b;">${o.order_type} • ${o.payment_status}</span><br>
+                                ${paymentStatusUI}<br>
                                 <b style="font-size: 1.2rem; color: #0f172a; display: block; margin-top: 8px;">${total}</b>
-                                
                                 ${itemsListHtml}
                             </div>`;
                 
-                if (isNew) {
+                // 🎯 THE FIX: If they finished paying, they are "isNew", so show the Accept/Decline buttons!
+                if (isAwaiting) {
+                    html += `<div class="c-actions">
+                                <button class="btn" style="background: #f1f5f9; color: #94a3b8; cursor: not-allowed;" disabled>Waiting for Stripe...</button>
+                             </div>`;
+                } else if (isNew) {
                     html += `<div class="c-actions">
                                 <button class="btn btn-decline" onclick="changeStatus('${o.name}', 'Cancelled')">Decline</button>
                                 <button class="btn btn-accept" onclick="changeStatus('${o.name}', 'Accepted')">Accept to KDS</button>
@@ -297,6 +300,7 @@ function renderGrid() {
             });
             grid.innerHTML = html;
         }
+
         async function changeStatus(orderId, newStatus) {
             try {
                 await fetch('/api/method/ultipos.api.order_manager.update_order_status', {

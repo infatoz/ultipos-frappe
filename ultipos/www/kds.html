@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitchen Display - UltiPOS</title>
+    <style>
+        /* Modern Minimalist Reset */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: #f8fafc; color: #334155; padding: 2rem; }
+        
+        /* Header */
+        .kds-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 1rem; }
+        .kds-title { font-size: 1.8rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 10px; }
+        .kds-title span { color: #f97316; } 
+        
+        /* Grid Layout */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+        
+        /* The Ticket Card */
+        .ticket { 
+            background: #ffffff; 
+            border-radius: 16px; 
+            padding: 1.5rem; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border-top: 6px solid #f97316; 
+            animation: slideUp 0.4s ease-out forwards;
+        }
+        
+        .ticket-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.2rem; border-bottom: 1px dashed #cbd5e1; padding-bottom: 0.8rem; }
+        .ticket-id { font-size: 1.2rem; font-weight: 800; color: #0f172a; }
+        .ticket-time { font-size: 0.85rem; color: #64748b; font-weight: 600; background: #f1f5f9; padding: 4px 8px; border-radius: 6px; }
+
+        /* The Food Items */
+        .item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            padding: 1rem; 
+            background: #f8fafc; 
+            margin-bottom: 0.75rem; 
+            border-radius: 12px; 
+            border: 1px solid #e2e8f0;
+            cursor: pointer; 
+            user-select: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .item:active { transform: scale(0.97); }
+        .item:hover { border-color: #cbd5e1; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+
+        .item-name { font-weight: 700; font-size: 1rem; color: #334155; }
+        .item-qty { font-weight: 800; color: #f97316; margin-right: 8px; font-size: 1.1rem; }
+        
+        .badge { font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .status-Received { background-color: #e2e8f0; color: #64748b; }
+        .status-Preparing { background-color: #ffedd5; color: #ea580c; border: 1px solid #fdba74; }
+        
+        .empty-state { grid-column: 1 / -1; text-align: center; padding: 4rem; color: #94a3b8; font-size: 1.2rem; font-weight: 600; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="kds-header">
+        <div class="kds-title">👨‍🍳 <span>UltiPOS</span> Kitchen</div>
+        <div id="last-sync" style="font-size: 0.85rem; color: #94a3b8;">Syncing...</div>
+    </div>
+    
+    <div id="kds-board" class="grid">
+        <div class="empty-state">Loading kitchen tickets...</div>
+    </div>
+
+    <script>
+        // 🎯 THE LOGIN GUARD: Kick out Guests immediately
+        const currentUser = "{{ frappe.session.user }}";
+        if (currentUser === "Guest") {
+            window.location.href = "/login?redirect-to=/kds";
+        }
+
+        window.csrf_token = "{{ frappe.session.csrf_token }}";
+
+        async function loadKDS() {
+            try {
+                // Cache buster included
+                const response = await fetch('/api/method/ultipos.api.kds.get_kds_tickets?_t=' + Date.now(), {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': window.csrf_token },
+                    cache: 'no-store' 
+                });
+                
+                const data = await response.json();
+                
+                if (data.message && data.message.error) {
+                    document.getElementById('kds-board').innerHTML = `<div class="empty-state">${data.message.error}</div>`;
+                    return;
+                }
+                
+                if (data.message) {
+                    renderBoard(data.message.orders, data.message.items);
+                    let now = new Date();
+                    document.getElementById('last-sync').innerText = "Last sync: " + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                }
+            } catch (error) {
+                console.error("Error fetching KDS data:", error);
+            }
+        }
+
+        function renderBoard(orders, items) {
+            let html = "";
+            orders.forEach(order => {
+                let orderItems = items.filter(i => i.parent === order.name);
+                if (orderItems.length === 0) return;
+
+                let orderNoteHtml = order.notes 
+                    ? `<div style="background: #fee2e2; color: #b91c1c; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 12px; font-weight: 700;">📝 Note: ${order.notes}</div>` 
+                    : "";
+
+                html += `<div class="ticket">
+                            <div class="ticket-header">
+                                <div class="ticket-id">${order.order_number}</div>
+                                <div class="ticket-time">${order.order_time}</div>
+                            </div>
+                            ${orderNoteHtml}`;
+                
+                orderItems.forEach(item => {
+                    let modsHtml = "";
+                    
+                    // 🎯 THE BULLETPROOF MODIFIER PARSER
+                    if (item.modifiers && item.modifiers !== "[]" && item.modifiers !== "null") {
+                        try {
+                            let parsedMods = typeof item.modifiers === 'string' ? JSON.parse(item.modifiers) : item.modifiers;
+                            
+                            if (Array.isArray(parsedMods) && parsedMods.length > 0) {
+                                parsedMods.forEach(m => {
+                                    let mQty = (m.qty && m.qty > 1) ? `x${m.qty}` : "";
+                                    modsHtml += `<div style="font-size: 0.85rem; color: #64748b; margin-top: 6px; padding-left: 12px; border-left: 2px solid #cbd5e1;">+ ${m.name} ${mQty}</div>`;
+                                });
+                            }
+                        } catch(e) { 
+                            console.error("Failed to parse modifiers for:", item.item_name, e); 
+                        }
+                    }
+
+                    let itemNoteHtml = (item.notes && item.notes !== "null")
+                        ? `<div style="font-size: 0.85rem; color: #ea580c; margin-top: 6px; padding-left: 12px; border-left: 2px solid #fdba74; font-weight: 600;">* ${item.notes}</div>`
+                        : "";
+
+                    html += `<div class="item" onclick="tapItem('${item.name}', '${item.item_status}')">
+                                <div style="width: 100%;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <div>
+                                            <span class="item-qty">${item.qty}x</span>
+                                            <span class="item-name">${item.item_name}</span>
+                                        </div>
+                                        <span class="badge status-${item.item_status}">${item.item_status}</span>
+                                    </div>
+                                    ${modsHtml}
+                                    ${itemNoteHtml}
+                                </div>
+                             </div>`;
+                });
+                html += `</div>`;
+            });
+            document.getElementById('kds-board').innerHTML = html || `<div class="empty-state">No active orders. Kitchen is clear! ✨</div>`;
+        }
+
+        async function tapItem(docname, currentStatus) {
+            let nextStatus = currentStatus === "Received" ? "Preparing" : "Ready";
+            
+            try {
+                await fetch('/api/method/ultipos.api.kds.update_item_status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': window.csrf_token },
+                    body: JSON.stringify({ item_docname: docname, new_status: nextStatus })
+                });
+                
+                // Immediately fetch fresh data so the UI snaps instantly
+                loadKDS(); 
+            } catch (error) {
+                console.error("Error updating item:", error);
+            }
+        }
+
+        // Initial Load
+        loadKDS();
+
+        // ==============================================================================
+        // 📡 APPROACH 1: POLLING (Currently Active)
+        // ==============================================================================
+        // Polls the server every 5 seconds. Best for kitchens with spotty/unstable Wi-Fi.
+        let pollingTimer = setInterval(loadKDS, 5000);
+
+        // ==============================================================================
+        // ⚡ APPROACH 2: WEBSOCKETS / REALTIME (Commented Out)
+        // ==============================================================================
+        /*
+        // BACKEND REQUIREMENT: 
+        // If your team activates this, they must add this exact line of Python to the `order.py` 
+        // and `kds.py` backend functions whenever an order status updates:
+        // frappe.publish_realtime('refresh_kds', user=frappe.session.user)
+
+        // 1. Turn off the polling timer above:
+        // clearInterval(pollingTimer);
+
+        // 2. Listen for the WebSocket event from Frappe:
+        if (typeof frappe !== 'undefined' && frappe.realtime) {
+            console.log("WebSocket connected. Waiting for 'refresh_kds' events...");
+            frappe.realtime.on('refresh_kds', function(data) {
+                console.log("⚡ Realtime event received! Refreshing KDS...");
+                loadKDS();
+            });
+        } else {
+            console.warn("Frappe WebSockets require Frappe's JS bundle (socket.io) to be included in the header.");
+        }
+        */
+
+    </script>
+</body>
+</html>

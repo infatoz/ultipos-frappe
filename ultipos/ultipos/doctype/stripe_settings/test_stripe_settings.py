@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestOnlineStoreSettings(FrappeTestCase):
+class TestStripeSettings(FrappeTestCase):
 	pass

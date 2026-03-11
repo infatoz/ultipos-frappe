@@ -1,47 +1,52 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:screen_name",
- "creation": "2026-01-08 00:15:57.178651",
+ "creation": "2026-03-05 15:26:45.068247",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "screen_name",
-  "outlet",
-  "active"
+  "restaurant",
+  "secret_key",
+  "publishable_key",
+  "is_enabled"
  ],
  "fields": [
   {
-   "fieldname": "screen_name",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Screen Name",
-   "reqd": 1,
-   "unique": 1
-  },
-  {
-   "fieldname": "outlet",
+   "fieldname": "restaurant",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Outlet",
-   "options": "Outlet",
+   "label": "Restaurant",
+   "options": "Restaurant",
+   "reqd": 1
+  },
+  {
+   "fieldname": "secret_key",
+   "fieldtype": "Password",
+   "in_list_view": 1,
+   "label": "Secret_key",
+   "reqd": 1
+  },
+  {
+   "fieldname": "publishable_key",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Publishable_key",
    "reqd": 1
   },
   {
    "default": "0",
-   "fieldname": "active",
+   "fieldname": "is_enabled",
    "fieldtype": "Check",
-   "label": "Active"
+   "label": "Is_enabled"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-06 19:05:42.404642",
+ "modified": "2026-03-05 15:29:53.687282",
  "modified_by": "Administrator",
  "module": "Ultipos",
- "name": "KDS Screen",
- "naming_rule": "By fieldname",
+ "name": "Stripe Settings",
  "owner": "Administrator",
  "permissions": [
   {
@@ -67,25 +72,11 @@
    "role": "Restaurant Owner",
    "share": 1,
    "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Outlet Manager",
-   "share": 1,
-   "write": 1
   }
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
- "title_field": "screen_name"
+ "states": []
 }

@@ -35,8 +35,8 @@ def get_outlet(outlet_code: str):
     outlet = frappe.get_doc("Outlet", outlet_name)
     if outlet.status != "Active":
         frappe.throw("Outlet inactive")
-    if int(outlet.is_accepting_orders or 0) != 1:
-        frappe.throw("Outlet is not accepting orders currently")
+    # if int(outlet.is_accepting_orders or 0) != 1:
+    #     frappe.throw("Outlet is not accepting orders currently")
     return outlet
 
 

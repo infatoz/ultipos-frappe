@@ -4,10 +4,9 @@ from frappe.utils import now_datetime, getdate
 
 
 @frappe.whitelist(allow_guest=True)
-def get_active(outlet_code=None):
+def get_active(outlet_code=None, platform="Web", order_type="Delivery"):
     """
-    ✅ Returns active coupons for outlet
-    SAFE: selects only fields that exist in your Coupon DocType
+    ✅ Returns active coupons for outlet using STRICT database-level filtering.
     """
     if not outlet_code:
         frappe.throw("outlet_code required")
@@ -18,9 +17,13 @@ def get_active(outlet_code=None):
 
     today = getdate(now_datetime())
 
+    # 🎯 FIX 1: We tell the database to ONLY give us coupons for THIS outlet (or global ones)
     coupons = frappe.get_all(
         "Coupon",
-        filters={"status": "Active"},
+        filters={
+            "status": "Active",
+            "outlet": ["in", [outlet_name, "", None]] # Strict DB filter!
+        },
         fields=[
             "name",
             "coupon_code",
@@ -39,33 +42,33 @@ def get_active(outlet_code=None):
 
     result = []
     for c in coupons:
-        # ✅ outlet restriction
-        if c.get("outlet") and c.get("outlet") != outlet_name:
-            continue
-
-        # ✅ date validity
+        # ✅ FIX 2: Date validity check
         if c.get("start_date") and today < getdate(c.get("start_date")):
             continue
         if c.get("end_date") and today > getdate(c.get("end_date")):
+            continue
+
+        # ✅ FIX 3: Platform check (e.g., Don't show UberEats coupons on the Web app!)
+        if c.get("platform") and c.get("platform") != platform:
+            continue
+
+        # ✅ FIX 4: Order Type check (e.g., Don't show Delivery coupons for Dine-In!)
+        if c.get("applicable_order_type") and c.get("applicable_order_type") != order_type:
             continue
 
         result.append({
             "coupon_code": (c.get("coupon_code") or "").upper(),
             "discount_type": c.get("discount_type"),
             "discount_value": float(c.get("discount_value") or 0),
-
             "min_order_amount": float(c.get("min_order_amount") or 0),
             "max_discount": float(c.get("max_discount") or 0),
-
             "start_date": str(c.get("start_date") or ""),
             "end_date": str(c.get("end_date") or ""),
-
             "platform": c.get("platform"),
             "applicable_order_type": c.get("applicable_order_type"),
         })
 
     return result
-
 
 @frappe.whitelist(allow_guest=True)
 def validate_coupon(outlet_code=None, coupon_code=None, cart_total=0, customer_id=None):

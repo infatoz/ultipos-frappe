@@ -56,7 +56,11 @@ def get_dashboard_data():
 @frappe.whitelist()
 def update_order_status(order_id, new_status):
     """FOH Accepts or Declines an order"""
-    frappe.db.set_value("Order", order_id, "order_status", new_status)
+    
+    # 🎯 THE FIX: Use doc.save() instead of set_value so Frappe triggers the KOT hooks!
+    doc = frappe.get_doc("Order", order_id)
+    doc.order_status = new_status
+    doc.save(ignore_permissions=True)
     
     # If declined, cancel the items so KDS never sees them
     if new_status == "Cancelled":

@@ -27,8 +27,16 @@ def order_permission_query(user):
             o_str = ", ".join([frappe.db.escape(o) for o in managed_outlets])
             conditions.append(f"outlet IN ({o_str})")
 
-    if conditions:
-        return " OR ".join(conditions)
+    # 4. 🎯 NEW: Order Manager sees ONLY orders for the Outlet saved in their User profile!
+    if "OrderManager" in roles or "Order Manager" in roles:
+        # We grab the custom 'outlet' field you created on the User DocType
+        user_outlet = frappe.db.get_value("User", user, "outlet")
+        if user_outlet:
+            conditions.append(f"outlet = {frappe.db.escape(user_outlet)}")
 
-    # Fallback
+    # Combine all valid conditions (If they have multiple roles, they get access to all of them)
+    if conditions:
+        return "(" + " OR ".join(conditions) + ")"
+
+    # Fallback: If they don't match any of the above, block them completely
     return "1=0"

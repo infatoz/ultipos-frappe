@@ -68,7 +68,7 @@ def create_checkout_session(order_id):
 
 @frappe.whitelist(allow_guest=True)
 def webhook():
-    # 🎯 FIX 1: Read the raw JSON directly to avoid Stripe library key crashes
+    # Read the raw JSON directly to avoid Stripe library key crashes
     payload = frappe.request.get_json()
 
     # We only care about the checkout success event
@@ -78,21 +78,28 @@ def webhook():
 
         if order_id:
             try:
-                # 1. Update the Order status
+                # 1. Fetch the Order
                 order = frappe.get_doc("Order", order_id)
                 order.db_set("payment_status", "Paid")
-                order.db_set("order_status", "Accepted")
                 
-                # 2. Create the official payment receipt
+                # 2. 🎯 THE GHOST SLAYER: Check the Auto-Accept toggle (Bypassing cache!)
+                auto_accept_val = frappe.db.get_value("Outlet", order.outlet, "auto_accept_orders")
+                
+                if int(auto_accept_val or 0) == 1:
+                    order.db_set("order_status", "Accepted") # Auto-route to Kitchen
+                else:
+                    order.db_set("order_status", "New") # Send to FOH Dashboard to ring the bell!
+                
+                # 3. Create the official payment receipt
                 if not frappe.db.exists("Order Payment", {"order": order_id}):
                     payment_doc = frappe.new_doc("Order Payment")
                     payment_doc.order = order_id
                     payment_doc.amount = order.total_amount
-                    
-                    # 🎯 FIX 2: Using "Online" just in case "Stripe" isn't in your Dropdown options!
                     payment_doc.payment_method = "Online" 
                     payment_doc.platform = "Web"
-                    payment_doc.status = "Paid"
+                    
+                    # 4. 🎯 THE TYPO FIX: Match your database's exact spelling!
+                    payment_doc.status = "Sucess" 
                     payment_doc.transaction_id = session.get("payment_intent")
                     
                     payment_doc.insert(ignore_permissions=True)
@@ -100,7 +107,7 @@ def webhook():
                 frappe.db.commit()
 
             except Exception as e:
-                # 🎯 FIX 3: If Frappe crashes again, it will log the EXACT reason in the Error Log!
+                # If Frappe crashes again, it will log the EXACT reason in the Error Log!
                 frappe.log_error(title="Webhook DB Crash", message=str(e) + "\n" + frappe.get_traceback())
                 return "Crash", 500
 

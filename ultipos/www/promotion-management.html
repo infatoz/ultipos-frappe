@@ -96,11 +96,15 @@ frappe.ready(function() {
             if (r.message && r.message.success) {
                 $('#current-restaurant').val(r.message.restaurant);
                 
+                // Populate Outlets safely
+                // Populate Outlets safely
                 r.message.outlets.forEach(o => {
-                    $('#promo-outlet').append(`<option value="${o.name}">${o.outlet_name}</option>`);
+                    $('#promo-outlet').append(`<option value="${o.name}">${o.safe_name}</option>`);
                 });
+                
+                // Populate Customers safely
                 r.message.customers.forEach(c => {
-                    $('#promo-customers').append(`<option value="${o.name}">${c.customer_name} - ${c.mobile_no || 'No Number'}</option>`);
+                    $('#promo-customers').append(`<option value="${c.name}">${c.safe_name} - ${c.safe_phone}</option>`);
                 });
             } else {
                 frappe.msgprint({title: "Error", indicator: "red", message: r.message?.message || "Could not load data."});
@@ -168,7 +172,10 @@ frappe.ready(function() {
                     $('#btn-dispatch').prop('disabled', false).text(`Send ${currentChannel} Campaign`);
                     if(r.message && r.message.success) {
                         frappe.show_alert({message: `Sent to ${r.message.sent} customers!`, indicator: 'green'});
-                        $('#promo-title, #promo-message').val(''); // Reset
+                        $('#promo-title, #promo-message').val(''); // Reset Form
+                        $('#promo-customers').val([]);
+                    } else {
+                        frappe.msgprint({title: "Error", indicator: "red", message: "Failed to send. Check server logs."});
                     }
                 }
             });

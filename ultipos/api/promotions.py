@@ -3,39 +3,59 @@ import json
 
 @frappe.whitelist()
 def get_campaign_data():
-    """Fetches outlets and customers for the logged-in owner's portal"""
+    """Smartly fetches outlets and customers regardless of exact schema names"""
     if frappe.session.user == "Guest":
         frappe.throw("Not logged in", frappe.PermissionError)
 
+    # 1. Find the Restaurant
     restaurant = frappe.db.get_value("Restaurant", {"owner_user": frappe.session.user}, "name")
-    
     if not restaurant:
         return {"success": False, "message": "No restaurant assigned to this user."}
 
-    # 🎯 THE FIX: Added ignore_permissions=True to bypass Frappe Role blocks
-    outlets = frappe.get_all(
-        "Outlet", 
-        filters={"restaurant": restaurant}, 
-        fields=["name", "outlet_name"],
-        ignore_permissions=True
-    )
+    # 2. Safely Fetch Outlets
+    meta_outlet = frappe.get_meta("Outlet")
+    out_fields = ["name"]
+    if meta_outlet.has_field("outlet_name"): out_fields.append("outlet_name")
     
-    customers = frappe.get_all(
-        "Customer", 
-        filters={"custom_restaurant": restaurant}, 
-        # 🎯 THE FIX: Changed to "phone" and "email"
-        fields=["name", "customer_name", "phone", "email"], 
-        ignore_permissions=True
-    )
+    out_filters = {}
+    if meta_outlet.has_field("restaurant"): out_filters["restaurant"] = restaurant
+
+    outlets = frappe.get_all("Outlet", filters=out_filters, fields=out_fields, ignore_permissions=True)
+    for o in outlets:
+        # Standardize the output for Javascript
+        o["safe_name"] = o.get("outlet_name") or o.name
+
+    # 3. Safely Fetch Customers
+    meta_cust = frappe.get_meta("Customer")
+    cust_fields = ["name"]
     
-    return {"success": True, "restaurant": restaurant, "outlets": outlets, "customers": customers}
+    # Grab whatever contact fields actually exist in your database
+    for f in ["customer_name", "phone", "mobile_no", "whatsapp", "email"]:
+        if meta_cust.has_field(f): cust_fields.append(f)
+
+    cust_filters = {}
+    if meta_cust.has_field("custom_restaurant"): cust_filters["custom_restaurant"] = restaurant
+    elif meta_cust.has_field("restaurant"): cust_filters["restaurant"] = restaurant
+
+    customers = frappe.get_all("Customer", filters=cust_filters, fields=cust_fields, ignore_permissions=True)
+    for c in customers:
+        # Standardize the output for Javascript
+        c["safe_name"] = c.get("customer_name") or c.name
+        c["safe_phone"] = c.get("phone") or c.get("mobile_no") or c.get("whatsapp") or "No Number"
+
+    return {
+        "success": True, 
+        "restaurant": restaurant, 
+        "outlets": outlets, 
+        "customers": customers
+    }
+
 @frappe.whitelist()
 def dispatch_campaign(title, channel, target_audience, message, restaurant, outlet=None, specific_customers=None):
-    """Logs the promotion and routes it to SMS, WhatsApp, or Email"""
+    """Smartly sends the campaign based on available database fields"""
     if frappe.session.user == "Guest":
         frappe.throw("Unauthorized", frappe.PermissionError)
 
-    # 1. Log the Promo to the Database
     promo = frappe.new_doc("Promotion")
     promo.title = title
     promo.restaurant = restaurant
@@ -46,15 +66,18 @@ def dispatch_campaign(title, channel, target_audience, message, restaurant, outl
     promo.status = "Sending"
     promo.insert(ignore_permissions=True)
     
-    # 2. Filter target customers
-    filters = {"custom_restaurant": restaurant}
-    if outlet:
-        filters["custom_outlet"] = outlet
+    # Safely determine which fields to fetch
+    meta_cust = frappe.get_meta("Customer")
+    cust_fields = ["name"]
+    for f in ["phone", "mobile_no", "whatsapp", "email", "email_id", "country_code"]:
+        if meta_cust.has_field(f): cust_fields.append(f)
+
+    cust_filters = {}
+    if meta_cust.has_field("custom_restaurant"): cust_filters["custom_restaurant"] = restaurant
+    elif meta_cust.has_field("restaurant"): cust_filters["restaurant"] = restaurant
+    if outlet and meta_cust.has_field("custom_outlet"): cust_filters["custom_outlet"] = outlet
         
-    # Ensure these fields match your database perfectly! 
-    # If your phone number field is called something else (like 'phone'), change 'mobile_no' to match it.
-    # 🎯 THE FIX: Changed to "phone" and "email"
-    all_customers = frappe.get_all("Customer", filters=filters, fields=["name", "phone", "email", "country_code"])
+    all_customers = frappe.get_all("Customer", filters=cust_filters, fields=cust_fields, ignore_permissions=True)
     
     if target_audience == "Specific Customers" and specific_customers:
         selected_ids = json.loads(specific_customers)
@@ -68,21 +91,16 @@ def dispatch_campaign(title, channel, target_audience, message, restaurant, outl
     success_count = 0
 
     # ==========================================
-    # 🟢 EMAIL (Built-in Frappe)
+    # 🟢 EMAIL
     # ==========================================
     if channel == "Email":
-        recipients = [c.email for c in targets if c.email] # 🎯 Changed to c.email
+        recipients = [c.get("email") or c.get("email_id") for c in targets if c.get("email") or c.get("email_id")]
         if recipients:
-            frappe.sendmail(
-                recipients=recipients,
-                subject=title,
-                content=message,
-                now=True 
-            )
+            frappe.sendmail(recipients=recipients, subject=title, content=message, now=True)
             success_count = len(recipients)
 
     # ==========================================
-    # 🔵 SMS & WHATSAPP (Twilio)
+    # 🔵 SMS & WHATSAPP
     # ==========================================
     elif channel in ["SMS", "WhatsApp"]:
         try:
@@ -100,30 +118,25 @@ def dispatch_campaign(title, channel, target_audience, message, restaurant, outl
         client = Client(sid, token)
 
         for cust in targets:
-            if not cust.phone: # 🎯 Changed to cust.phone
+            # Smartly grab whatever phone field is available
+            phone_val = cust.get("phone") or cust.get("mobile_no") or cust.get("whatsapp")
+            if not phone_val:
                 continue
             
-            # Format phone number to E.164 standard
-            c_code = str(cust.country_code or "").replace("+", "")
-            formatted_number = f"+{c_code}{cust.phone}" if c_code else f"+{cust.phone}"
+            c_code = str(cust.get("country_code") or "").replace("+", "")
+            formatted_number = f"+{c_code}{phone_val}" if c_code else f"+{phone_val}"
                 
             try:
                 if channel == "SMS":
                     sender = rest_doc.twilio_sms_number
                     client.messages.create(body=message, from_=sender, to=formatted_number)
-                
                 elif channel == "WhatsApp":
                     sender = rest_doc.twilio_whatsapp_number
-                    client.messages.create(
-                        body=message, 
-                        from_=f"whatsapp:{sender}", 
-                        to=f"whatsapp:{formatted_number}"
-                    )
+                    client.messages.create(body=message, from_=f"whatsapp:{sender}", to=f"whatsapp:{formatted_number}")
                 success_count += 1
             except Exception as e:
                 frappe.log_error(f"Twilio {channel} Failed for {formatted_number}", str(e))
 
     promo.db_set("status", "Completed")
     frappe.db.commit()
-    
     return {"success": True, "sent": success_count}

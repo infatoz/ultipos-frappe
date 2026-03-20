@@ -1,0 +1,180 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+{% if frappe.session.user == "Guest" %}
+    <div class="text-center p-10">
+        <h2>Unauthorized</h2>
+        <p>You must be logged in as a Restaurant Owner to view this page.</p>
+        <a href="/login" class="btn btn-primary">Login</a>
+    </div>
+{% else %}
+
+<style>
+    .promo-dashboard { display: flex; min-height: 85vh; background: #f8fafc; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-top: 20px;}
+    .sidebar { width: 250px; background: #1e293b; color: white; padding: 20px; display: flex; flex-direction: column; gap: 10px;}
+    .sidebar h3 { font-size: 1.2rem; font-weight: bold; margin-bottom: 20px; color: #f8fafc; border-bottom: 1px solid #334155; padding-bottom: 10px;}
+    .nav-btn { background: transparent; color: #cbd5e1; border: none; text-align: left; padding: 12px 15px; border-radius: 8px; cursor: pointer; font-weight: 500; transition: 0.2s;}
+    .nav-btn:hover { background: #334155; color: white;}
+    .nav-btn.active { background: #3b82f6; color: white; font-weight: bold;}
+    
+    .main-content { flex: 1; padding: 40px; }
+    .card { background: white; padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-weight: 600; color: #475569; margin-bottom: 8px; font-size: 0.9rem;}
+    .form-control { width: 100%; padding: 10px 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; }
+    .form-control:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    
+    #specific-customers-wrapper { display: none; background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0; }
+    .btn-send { background: #10b981; color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s;}
+    .btn-send:hover { background: #059669; }
+    .btn-send:disabled { background: #94a3b8; cursor: not-allowed; }
+</style>
+
+<div class="promo-dashboard">
+    <div class="sidebar">
+        <h3>Owner Portal</h3>
+        <button class="nav-btn active" data-tab="Dashboard">Overview</button>
+        <button class="nav-btn" data-tab="SMS">SMS Campaign</button>
+        <button class="nav-btn" data-tab="WhatsApp">WhatsApp</button>
+        <button class="nav-btn" data-tab="Email">Email</button>
+    </div>
+
+    <div class="main-content">
+        <h2 id="page-title" style="margin-top: 0; margin-bottom: 20px; font-weight: 800; color: #0f172a;">Campaign Overview</h2>
+        
+        <div class="card" id="campaign-form" style="display:none;">
+            <input type="hidden" id="current-restaurant" value="">
+            
+            <div class="form-group">
+                <label>Campaign Name</label>
+                <input type="text" id="promo-title" class="form-control" placeholder="e.g., Weekend Special">
+            </div>
+
+            <div style="display: flex; gap: 20px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Select Outlet</label>
+                    <select id="promo-outlet" class="form-control">
+                        <option value="">All Outlets</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Target Audience</label>
+                    <select id="promo-audience" class="form-control">
+                        <option value="All Customers">All Customers</option>
+                        <option value="Specific Customers">Specific Customers</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group" id="specific-customers-wrapper">
+                <label>Select Specific Customers (Ctrl/Cmd + Click)</label>
+                <select id="promo-customers" class="form-control" multiple style="height: 120px;"></select>
+            </div>
+
+            <div class="form-group">
+                <label>Message Content</label>
+                <textarea id="promo-message" class="form-control" rows="5" placeholder="Write your promotion text here..."></textarea>
+            </div>
+
+            <button id="btn-dispatch" class="btn-send">Send Campaign</button>
+        </div>
+        
+        <div id="dashboard-view">
+            <p>Select a campaign channel on the left to start sending promotions.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+frappe.ready(function() {
+    let currentChannel = "Dashboard";
+
+    // 1. Fetch Outlets and Customers on load
+    frappe.call({
+        method: "ultipos.api.promotions.get_campaign_data",
+        callback: function(r) {
+            if (r.message && r.message.success) {
+                $('#current-restaurant').val(r.message.restaurant);
+                
+                r.message.outlets.forEach(o => {
+                    $('#promo-outlet').append(`<option value="${o.name}">${o.outlet_name}</option>`);
+                });
+                r.message.customers.forEach(c => {
+                    $('#promo-customers').append(`<option value="${o.name}">${c.customer_name} - ${c.mobile_no || 'No Number'}</option>`);
+                });
+            } else {
+                frappe.msgprint({title: "Error", indicator: "red", message: r.message?.message || "Could not load data."});
+            }
+        }
+    });
+
+    // 2. Sidebar Navigation
+    $('.nav-btn').on('click', function() {
+        $('.nav-btn').removeClass('active');
+        $(this).addClass('active');
+        
+        currentChannel = $(this).attr('data-tab');
+        $('#page-title').text(currentChannel === "Dashboard" ? "Campaign Overview" : `New ${currentChannel} Campaign`);
+        
+        if (currentChannel === "Dashboard") {
+            $('#campaign-form').hide();
+            $('#dashboard-view').show();
+        } else {
+            $('#dashboard-view').hide();
+            $('#campaign-form').show();
+            $('#btn-dispatch').text(`Send ${currentChannel} Campaign`);
+        }
+    });
+
+    // 3. Toggle Specific Customers logic
+    $('#promo-audience').on('change', function() {
+        if($(this).val() === "Specific Customers") {
+            $('#specific-customers-wrapper').slideDown(200);
+        } else {
+            $('#specific-customers-wrapper').slideUp(200);
+            $('#promo-customers').val([]); 
+        }
+    });
+
+    // 4. Send API Call
+    $('#btn-dispatch').on('click', function() {
+        const title = $('#promo-title').val();
+        const outlet = $('#promo-outlet').val();
+        const audience = $('#promo-audience').val();
+        const message = $('#promo-message').val();
+        const specific = $('#promo-customers').val() || [];
+        const restaurant = $('#current-restaurant').val();
+
+        if(!title || !message) {
+            frappe.throw("Title and Message are required!");
+            return;
+        }
+
+        frappe.confirm(`Dispatch this ${currentChannel} to your customers?`, () => {
+            $('#btn-dispatch').prop('disabled', true).text('Sending...');
+
+            frappe.call({
+                method: "ultipos.api.promotions.dispatch_campaign",
+                args: {
+                    title: title,
+                    channel: currentChannel,
+                    target_audience: audience,
+                    message: message,
+                    restaurant: restaurant,
+                    outlet: outlet,
+                    specific_customers: JSON.stringify(specific)
+                },
+                callback: function(r) {
+                    $('#btn-dispatch').prop('disabled', false).text(`Send ${currentChannel} Campaign`);
+                    if(r.message && r.message.success) {
+                        frappe.show_alert({message: `Sent to ${r.message.sent} customers!`, indicator: 'green'});
+                        $('#promo-title, #promo-message').val(''); // Reset
+                    }
+                }
+            });
+        });
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

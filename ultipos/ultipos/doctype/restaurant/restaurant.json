@@ -14,7 +14,11 @@
   "currency",
   "abn_number",
   "contact_email",
-  "contact_phone"
+  "contact_phone",
+  "twilio_sid",
+  "twilio_auth_token",
+  "twilio_sms_number",
+  "twilio_whatsapp_number"
  ],
  "fields": [
   {
@@ -84,12 +88,32 @@
    "options": "User",
    "reqd": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "twilio_sid",
+   "fieldtype": "Data",
+   "label": "Twilio SID"
+  },
+  {
+   "fieldname": "twilio_auth_token",
+   "fieldtype": "Password",
+   "label": "Twilio Auth Token"
+  },
+  {
+   "fieldname": "twilio_sms_number",
+   "fieldtype": "Data",
+   "label": "Twilio SMS Number"
+  },
+  {
+   "fieldname": "twilio_whatsapp_number",
+   "fieldtype": "Data",
+   "label": "Twilio WhatsApp Number"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-07 17:06:18.987272",
+ "modified": "2026-03-20 21:00:43.662410",
  "modified_by": "Administrator",
  "module": "Ultipos",
  "name": "Restaurant",

@@ -1,0 +1,139 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-16 20:07:08.267329",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "restaurant",
+  "is_enabled",
+  "enable_stripe",
+  "enable_worldline",
+  "enable_tyro",
+  "stripe_section_section",
+  "stripe_publishable_key",
+  "stripe_secret_key",
+  "worldline_section_section",
+  "worldline_merchant_id",
+  "worldline_api_key",
+  "tyro_section_section",
+  "tyro_merchant_id",
+  "tyro_api_key"
+ ],
+ "fields": [
+  {
+   "fieldname": "restaurant",
+   "fieldtype": "Link",
+   "label": "Restaurant",
+   "options": "Restaurant"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_enabled",
+   "fieldtype": "Check",
+   "label": "Is Enabled"
+  },
+  {
+   "fieldname": "stripe_section_section",
+   "fieldtype": "Section Break",
+   "label": "Stripe Section"
+  },
+  {
+   "fieldname": "stripe_publishable_key",
+   "fieldtype": "Data",
+   "label": "Stripe Publishable Key"
+  },
+  {
+   "fieldname": "stripe_secret_key",
+   "fieldtype": "Password",
+   "label": "Stripe Secret Key"
+  },
+  {
+   "fieldname": "worldline_section_section",
+   "fieldtype": "Section Break",
+   "label": "Worldline Section"
+  },
+  {
+   "fieldname": "worldline_merchant_id",
+   "fieldtype": "Data",
+   "label": "Worldline Merchant ID"
+  },
+  {
+   "fieldname": "worldline_api_key",
+   "fieldtype": "Password",
+   "label": "Worldline API Key"
+  },
+  {
+   "fieldname": "tyro_section_section",
+   "fieldtype": "Section Break",
+   "label": "Tyro Section"
+  },
+  {
+   "fieldname": "tyro_merchant_id",
+   "fieldtype": "Data",
+   "label": "Tyro Merchant ID"
+  },
+  {
+   "fieldname": "tyro_api_key",
+   "fieldtype": "Password",
+   "label": "Tyro API Key"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_stripe",
+   "fieldtype": "Check",
+   "label": "Enable Stripe"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_worldline",
+   "fieldtype": "Check",
+   "label": "Enable Worldline"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_tyro",
+   "fieldtype": "Check",
+   "label": "Enable Tyro"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-16 22:41:44.344075",
+ "modified_by": "Administrator",
+ "module": "Ultipos",
+ "name": "Payment Gateway Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Restaurant Owner",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

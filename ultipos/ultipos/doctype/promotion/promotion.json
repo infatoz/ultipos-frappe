@@ -1,0 +1,100 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-20 19:56:04.830642",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "promotions_section",
+  "title",
+  "restaurant",
+  "channel",
+  "outlet",
+  "target_audience",
+  "message",
+  "status"
+ ],
+ "fields": [
+  {
+   "fieldname": "promotions_section",
+   "fieldtype": "Section Break",
+   "label": "Promotions"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "restaurant",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Restaurant",
+   "options": "Restaurant",
+   "reqd": 1
+  },
+  {
+   "fieldname": "channel",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Channel",
+   "options": "SMS\nEmail\nWhatsApp",
+   "reqd": 1
+  },
+  {
+   "fieldname": "outlet",
+   "fieldtype": "Link",
+   "label": "Outlet",
+   "options": "Outlet"
+  },
+  {
+   "fieldname": "target_audience",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Target Audience",
+   "options": "All Customers\nSpecific Customers",
+   "reqd": 1
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Text",
+   "label": "Message",
+   "reqd": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nSending\nCompleted\nFailed"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-20 19:59:51.256403",
+ "modified_by": "Administrator",
+ "module": "Ultipos",
+ "name": "Promotion",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

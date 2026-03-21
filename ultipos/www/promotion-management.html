@@ -1,0 +1,206 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+{% if frappe.session.user == "Guest" %}
+    <div class="text-center p-10">
+        <h2>Unauthorized</h2>
+        <p>You must be logged in as a Restaurant Owner to view this page.</p>
+        <a href="/login" class="btn btn-primary" style="background-color: #f97316; border-color: #f97316;">Login</a>
+    </div>
+{% else %}
+
+<style>
+    /* Warm, light background for the whole dashboard */
+    .promo-dashboard { display: flex; min-height: 85vh; background: #fffcf9; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(249, 115, 22, 0.1); margin-top: 20px; border: 1px solid #ffedd5;}
+    
+    /* Crisp white sidebar with orange accents */
+    .sidebar { width: 260px; background: #ffffff; color: #1f2937; padding: 25px 20px; display: flex; flex-direction: column; gap: 10px; border-right: 1px solid #fed7aa;}
+    .sidebar h3 { font-size: 1.25rem; font-weight: 900; margin-bottom: 25px; color: #ea580c; border-bottom: 2px solid #ffedd5; padding-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;}
+    
+    /* Navigation Buttons */
+    .nav-btn { background: transparent; color: #6b7280; border: none; text-align: left; padding: 14px 18px; border-radius: 10px; cursor: pointer; font-weight: 600; transition: all 0.2s ease;}
+    .nav-btn:hover { background: #ffedd5; color: #ea580c; transform: translateX(4px);}
+    .nav-btn.active { background: #f97316; color: #ffffff; font-weight: 700; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);}
+    
+    /* Main Content Area */
+    .main-content { flex: 1; padding: 45px; }
+    #page-title { margin-top: 0; margin-bottom: 25px; font-weight: 900; color: #111827; font-size: 2rem; letter-spacing: -0.5px;}
+    
+    /* Form Card */
+    .card { background: #ffffff; padding: 35px; border-radius: 16px; border: 1px solid #fed7aa; box-shadow: 0 4px 6px -1px rgba(249, 115, 22, 0.05); }
+    
+    /* Form Elements */
+    .form-group { margin-bottom: 24px; }
+    .form-group label { display: block; font-weight: 700; color: #374151; margin-bottom: 10px; font-size: 0.95rem;}
+    .form-control { width: 100%; padding: 12px 16px; border: 1px solid #fdba74; border-radius: 10px; font-size: 1rem; color: #1f2937; background-color: #fffcf9; transition: all 0.2s ease;}
+    .form-control:focus { outline: none; border-color: #f97316; background-color: #ffffff; box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.15); }
+    .form-control::placeholder { color: #fdba74; }
+    
+    /* Specific Customers Wrapper - Warm tint */
+    #specific-customers-wrapper { display: none; background: #fff7ed; padding: 20px; border-radius: 12px; border: 1px solid #fed7aa; }
+    #specific-customers-wrapper label { color: #9a3412; }
+    
+    /* Send Button */
+    .btn-send { background: #f97316; color: white; border: none; width: 100%; padding: 16px; border-radius: 10px; font-size: 1.15rem; font-weight: 800; cursor: pointer; transition: all 0.2s ease; margin-top: 10px;}
+    .btn-send:hover { background: #ea580c; box-shadow: 0 6px 15px rgba(234, 88, 12, 0.3); transform: translateY(-1px);}
+    .btn-send:active { transform: translateY(1px); box-shadow: none;}
+    .btn-send:disabled { background: #fdba74; cursor: not-allowed; transform: none; box-shadow: none;}
+    
+    /* Dashboard Placeholder Text */
+    #dashboard-view p { color: #6b7280; font-size: 1.1rem; }
+</style>
+
+<div class="promo-dashboard">
+    <div class="sidebar">
+        <h3>Owner Portal</h3>
+        <button class="nav-btn active" data-tab="Dashboard">Overview</button>
+        <button class="nav-btn" data-tab="SMS">SMS Campaign</button>
+        <button class="nav-btn" data-tab="WhatsApp">WhatsApp</button>
+        <button class="nav-btn" data-tab="Email">Email</button>
+    </div>
+
+    <div class="main-content">
+        <h2 id="page-title">Campaign Overview</h2>
+        
+        <div class="card" id="campaign-form" style="display:none;">
+            <input type="hidden" id="current-restaurant" value="">
+            
+            <div class="form-group">
+                <label>Campaign Name</label>
+                <input type="text" id="promo-title" class="form-control" placeholder="e.g., Weekend Special">
+            </div>
+
+            <div style="display: flex; gap: 24px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Select Outlet</label>
+                    <select id="promo-outlet" class="form-control">
+                        <option value="">All Outlets</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Target Audience</label>
+                    <select id="promo-audience" class="form-control">
+                        <option value="All Customers">All Customers</option>
+                        <option value="Specific Customers">Specific Customers</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group" id="specific-customers-wrapper">
+                <label>Select Specific Customers (Ctrl/Cmd + Click)</label>
+                <select id="promo-customers" class="form-control" multiple style="height: 140px; background-color: #ffffff;"></select>
+            </div>
+
+            <div class="form-group">
+                <label>Message Content</label>
+                <textarea id="promo-message" class="form-control" rows="6" placeholder="Write your promotion text here..."></textarea>
+            </div>
+
+            <button id="btn-dispatch" class="btn-send">Send Campaign</button>
+        </div>
+        
+        <div id="dashboard-view">
+            <p>Select a campaign channel on the left to start sending promotions.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+frappe.ready(function() {
+    let currentChannel = "Dashboard";
+
+    // 1. Fetch Outlets and Customers on load
+    frappe.call({
+        method: "ultipos.api.promotions.get_campaign_data",
+        callback: function(r) {
+            if (r.message && r.message.success) {
+                $('#current-restaurant').val(r.message.restaurant);
+                
+                // Populate Outlets safely
+                r.message.outlets.forEach(o => {
+                    $('#promo-outlet').append(`<option value="${o.name}">${o.safe_name}</option>`);
+                });
+                
+                // Populate Customers safely
+                r.message.customers.forEach(c => {
+                    $('#promo-customers').append(`<option value="${c.name}">${c.safe_name} - ${c.safe_phone}</option>`);
+                });
+            } else {
+                frappe.msgprint({title: "Error", indicator: "red", message: r.message?.message || "Could not load data."});
+            }
+        }
+    });
+
+    // 2. Sidebar Navigation
+    $('.nav-btn').on('click', function() {
+        $('.nav-btn').removeClass('active');
+        $(this).addClass('active');
+        
+        currentChannel = $(this).attr('data-tab');
+        $('#page-title').text(currentChannel === "Dashboard" ? "Campaign Overview" : `New ${currentChannel} Campaign`);
+        
+        if (currentChannel === "Dashboard") {
+            $('#campaign-form').hide();
+            $('#dashboard-view').show();
+        } else {
+            $('#dashboard-view').hide();
+            $('#campaign-form').show();
+            $('#btn-dispatch').text(`Send ${currentChannel} Campaign`);
+        }
+    });
+
+    // 3. Toggle Specific Customers logic
+    $('#promo-audience').on('change', function() {
+        if($(this).val() === "Specific Customers") {
+            $('#specific-customers-wrapper').slideDown(250);
+        } else {
+            $('#specific-customers-wrapper').slideUp(250);
+            $('#promo-customers').val([]); 
+        }
+    });
+
+    // 4. Send API Call
+    $('#btn-dispatch').on('click', function() {
+        const title = $('#promo-title').val();
+        const outlet = $('#promo-outlet').val();
+        const audience = $('#promo-audience').val();
+        const message = $('#promo-message').val();
+        const specific = $('#promo-customers').val() || [];
+        const restaurant = $('#current-restaurant').val();
+
+        if(!title || !message) {
+            frappe.throw("Title and Message are required!");
+            return;
+        }
+
+        frappe.confirm(`Dispatch this ${currentChannel} to your customers?`, () => {
+            $('#btn-dispatch').prop('disabled', true).text('Sending...');
+
+            frappe.call({
+                method: "ultipos.api.promotions.dispatch_campaign",
+                args: {
+                    title: title,
+                    channel: currentChannel,
+                    target_audience: audience,
+                    message: message,
+                    restaurant: restaurant,
+                    outlet: outlet,
+                    specific_customers: JSON.stringify(specific)
+                },
+                callback: function(r) {
+                    $('#btn-dispatch').prop('disabled', false).text(`Send ${currentChannel} Campaign`);
+                    if(r.message && r.message.success) {
+                        frappe.show_alert({message: `Sent to ${r.message.sent} customers!`, indicator: 'green'});
+                        $('#promo-title, #promo-message').val(''); // Reset Form
+                        $('#promo-customers').val([]);
+                    } else {
+                        frappe.msgprint({title: "Error", indicator: "red", message: "Failed to send. Check server logs."});
+                    }
+                }
+            });
+        });
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

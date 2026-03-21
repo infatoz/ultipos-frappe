@@ -17,8 +17,15 @@ class Restaurant(Document):
         )
     
     def validate(self):
-        if frappe.db.exists(
-			"Restaurant",
-			{"owner_user": self.owner_user}
-		): frappe.throw("This user already owns a restaurant")
+        # 🎯 The Fix: Check if another restaurant has this owner, excluding THIS restaurant!
+        if self.owner_user:
+            existing_restaurant = frappe.db.exists(
+                "Restaurant", 
+                {
+                    "owner_user": self.owner_user, 
+                    "name": ["!=", self.name] # <-- THIS is the magic line that fixes the bug!
+                }
+            )
+            if existing_restaurant:
+                frappe.throw("This user already owns a restaurant.")
 

@@ -152,6 +152,7 @@ permission_query_conditions = {
     "Coupon": "ultipos.permissions.coupon.get_permission_query_conditions",
     "Stripe Settings": "ultipos.permissions.stripe_settings.get_permission_query_conditions",
     "Store Info": "ultipos.permissions.store_info.get_permission_query_conditions",
+    "Promotion": "ultipos.permissions.promotion.get_permission_query_conditions"
 }
 #
 # has_permission = {
